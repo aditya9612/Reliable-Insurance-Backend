@@ -14,6 +14,8 @@ from app.api.v1.endpoints import (
     integrations,
     notifications,
     renewals,
+    dashboards,
+    reports,
 )
 
 api_router = APIRouter()
@@ -117,6 +119,21 @@ api_router.include_router(
     prefix="/renewals",
     tags=["renewals"],
 )
+
+# Mount Phase 14 Dashboards & KPI Performance Engine endpoints
+api_router.include_router(
+    dashboards.router,
+    prefix="/dashboards",
+    tags=["dashboards"],
+)
+
+# Mount Phase 14 MIS, POSP Invoices, Accounting, Operations & Renewal Reports endpoints
+api_router.include_router(
+    reports.router,
+    prefix="/reports",
+    tags=["reports"],
+)
+
 
 
 

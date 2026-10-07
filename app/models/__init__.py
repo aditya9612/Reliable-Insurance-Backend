@@ -72,6 +72,10 @@ from app.models.notification import (
     MessageDetail,
     OTPLog,
 )
+from app.models.report import (
+    PospInvoice,
+    Target,
+)
 
 __all__ = [
     "Base",
@@ -134,4 +138,6 @@ __all__ = [
     "MessageMaster",
     "MessageDetail",
     "OTPLog",
+    "PospInvoice",
+    "Target",
 ]
