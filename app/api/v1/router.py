@@ -9,6 +9,8 @@ from app.api.v1.endpoints import (
     commission_accounting,
     claims_endorsements,
     documents,
+    masters,
+    search,
 )
 
 api_router = APIRouter()
@@ -77,6 +79,21 @@ api_router.include_router(
 api_router.include_router(
     documents.entity_documents_router,
 )
+
+# Mount Phase 12 Master Data & Underwriting Lookups endpoints
+api_router.include_router(
+    masters.router,
+    prefix="/masters",
+    tags=["masters"],
+)
+
+# Mount Phase 12 Search & Autocomplete endpoints
+api_router.include_router(
+    search.router,
+    prefix="/search",
+    tags=["search"],
+)
+
 
 
 

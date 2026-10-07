@@ -24,6 +24,10 @@ from app.models.master import (
     VehicleVariant,
     RTOMaster,
     InsuranceCompany,
+    Branch,
+    StateMaster,
+    DistrictMaster,
+    BankMaster,
 )
 from app.models.quotation import (
     AppQuatationEntry,
@@ -81,6 +85,10 @@ __all__ = [
     "VehicleVariant",
     "RTOMaster",
     "InsuranceCompany",
+    "Branch",
+    "StateMaster",
+    "DistrictMaster",
+    "BankMaster",
     "AppQuatationEntry",
     "AppQuotationRequest",
     "InsuranceCompanyQuotation",

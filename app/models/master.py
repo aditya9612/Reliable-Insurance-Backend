@@ -292,3 +292,95 @@ class InsuranceCompany(Base):
     VantageInsurance: Mapped[Optional[str]] = mapped_column("VantageInsurance", String(200), nullable=True, server_default=text("'0'"))
     VantageBranch: Mapped[Optional[str]] = mapped_column("VantageBranch", String(100), nullable=True, server_default=text("'0'"))
     VantageBranchAddress: Mapped[Optional[str]] = mapped_column("VantageBranchAddress", String(300), nullable=True, server_default=text("'0'"))
+
+
+class Branch(Base):
+    """
+    Branch Office Organization Master Model
+    Physical Table: tbl_branch
+    Physical PK: BranchId
+    Verified Column Count: 7
+    Physical Foreign Keys: 0
+    """
+    __tablename__ = "tbl_branch"
+    __table_args__ = (
+        Index("tbl_branch_code_idx", "BranchCode"),
+        {
+            "mysql_charset": "utf8",
+            "mysql_collate": "utf8_general_ci",
+            "mysql_row_format": "DYNAMIC",
+        },
+    )
+
+    BranchId: Mapped[int] = mapped_column("BranchId", Integer, primary_key=True, autoincrement=True)
+    BranchCode: Mapped[Optional[str]] = mapped_column("BranchCode", String(50), nullable=True)
+    BranchName: Mapped[Optional[str]] = mapped_column("BranchName", String(255), nullable=True)
+    Address: Mapped[Optional[str]] = mapped_column("Address", String(500), nullable=True)
+    ContactNo: Mapped[Optional[str]] = mapped_column("ContactNo", String(50), nullable=True)
+    BranchTypeId: Mapped[Optional[int]] = mapped_column("BranchTypeId", Integer, nullable=True, server_default=text("1"))
+    isdeleted: Mapped[int] = mapped_column("isdeleted", Integer, nullable=False, server_default=text("0"))
+
+
+class StateMaster(Base):
+    """
+    State Geographic Reference Master Model
+    Physical Table: tbl_state
+    Physical PK: StateID
+    Verified Column Count: 3
+    Physical Foreign Keys: 0
+    """
+    __tablename__ = "tbl_state"
+    __table_args__ = {
+        "mysql_charset": "utf8",
+        "mysql_collate": "utf8_general_ci",
+        "mysql_row_format": "DYNAMIC",
+    }
+
+    StateID: Mapped[int] = mapped_column("StateID", Integer, primary_key=True, autoincrement=True)
+    StateName: Mapped[str] = mapped_column("StateName", String(255), nullable=False)
+    isdeleted: Mapped[int] = mapped_column("isdeleted", Integer, nullable=False, server_default=text("0"))
+
+
+class DistrictMaster(Base):
+    """
+    District Geographic Reference Master Model
+    Physical Table: tbl_district
+    Physical PK: DistrictID
+    Verified Column Count: 4
+    Physical Foreign Keys: 0
+    """
+    __tablename__ = "tbl_district"
+    __table_args__ = (
+        Index("tbl_district_state_id_idx", "StateID"),
+        {
+            "mysql_charset": "utf8",
+            "mysql_collate": "utf8_general_ci",
+            "mysql_row_format": "DYNAMIC",
+        },
+    )
+
+    DistrictID: Mapped[int] = mapped_column("DistrictID", Integer, primary_key=True, autoincrement=True)
+    DistrictName: Mapped[str] = mapped_column("DistrictName", String(255), nullable=False)
+    StateID: Mapped[int] = mapped_column("StateID", Integer, nullable=False)
+    isdeleted: Mapped[int] = mapped_column("isdeleted", Integer, nullable=False, server_default=text("0"))
+
+
+class BankMaster(Base):
+    """
+    Commercial Bank Reference Master Model
+    Physical Table: tbl_bank
+    Physical PK: BankId
+    Verified Column Count: 3
+    Physical Foreign Keys: 0
+    """
+    __tablename__ = "tbl_bank"
+    __table_args__ = {
+        "mysql_charset": "utf8",
+        "mysql_collate": "utf8_general_ci",
+        "mysql_row_format": "DYNAMIC",
+    }
+
+    BankId: Mapped[int] = mapped_column("BankId", Integer, primary_key=True, autoincrement=True)
+    BankName: Mapped[str] = mapped_column("BankName", String(255), nullable=False)
+    isdeleted: Mapped[int] = mapped_column("isdeleted", Integer, nullable=False, server_default=text("0"))
+
