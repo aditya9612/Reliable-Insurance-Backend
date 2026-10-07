@@ -1,0 +1,40 @@
+# Phase 8 — Payment, Cheque, Reconciliation & Wallet Stored Procedure Mapping
+
+**Repository**: `Reliable-Insurance-Backend`  
+**Phase**: `Phase 8 — Payments, Cheques & Reconciliation Engine (Stage A2)`  
+**Target Runtime Database**: `localhost:3306/reliable_insurance_dev`
+
+---
+
+## 1. Overview
+
+This document maps all 22 legacy MySQL stored procedures (`brahmainsurance`) involved in payment instrument collection, multi-tier payment approvals, cheque deposit/clearance/bounce/penalty, payment reversal, insurer reconciliation, and partner E-Wallet management to their deterministic FastAPI service and repository implementations.
+
+---
+
+## 2. Complete Stored Procedure Mapping Matrix
+
+| # | Legacy Stored Procedure | Legacy Caller | Target Table(s) | Legacy Operation | FastAPI Service / Repository Method | FastAPI Endpoint |
+|---:|---|---|---|---|---|---|
+| 1 | `sp_InsertTransactionPayment` | `PolicyTransactionNew.aspx.cs`, `PE_TransactionEntry.aspx.cs` | `tbl_transactionpayment`, `tbl_transaction`, `tbl_account` | Inserts a payment instrument row, increments `PaidAmount`, recomputes `OutstandingAmount`, posts `AccTransId = 2`. | `PaymentService.record_policy_payment` / `PolicyBookingService.record_payment` | `POST /api/v1/policies/{transaction_id}/payments` |
+| 2 | `sp_UpdateTransactionPayment` | `PolicyTransactionNew.aspx.cs` | `tbl_transactionpayment` | Updates instrument metadata (`docno`, `bankname`, `PaymentDetails`, `PaymentDate`). | `PaymentRepository.update_payment` | `PUT /api/v1/payments/{payment_id}` |
+| 3 | `sp_GetPaymentsByTransactionId` | `PolicyTransactionNew.aspx.cs`, `PendingTransaction.aspx.cs` | `tbl_transactionpayment` | Lists payment instruments for a `TransanctionId`. | `PaymentService.list_policy_payments` | `GET /api/v1/policies/{transaction_id}/payments` |
+| 4 | `sp_SelectCashierApprovalGrid` | `CashierApprovalNew.aspx.cs` | `tbl_transactionpayment`, `tbl_transaction` | Lists payment instruments awaiting Cashier verification (`CashierApproval = 0`). | `PaymentRepository.list_payments` | `GET /api/v1/payments` |
+| 5 | `sp_UpdateCashierApproval` | `CashierApprovalNew.aspx.cs` | `tbl_transactionpayment`, `tbl_transactionappnew` | Sets `CashierApproval = 1`, `CashierApprovalDate = NOW()`. | `PaymentService.approve_payment` (`stage="CASHIER"`) | `POST /api/v1/payments/{payment_id}/approve` |
+| 6 | `sp_SelectAccountantApproval` | `AccountantApproval.aspx.cs` | `tbl_transactionpayment`, `tbl_transaction` | Lists payments awaiting Accountant verification (`AccountantApproval = 0`). | `PaymentRepository.list_payments` | `GET /api/v1/payments` |
+| 7 | `sp_UpdateAccountantApproval` | `AccountantApproval.aspx.cs` | `tbl_transactionpayment`, `tbl_transactionappnew`, `tbl_account` | Sets `AccountantApproval = 1`, `AccountantApprovalDate = NOW()`. | `PaymentService.approve_payment` (`stage="ACCOUNTANT"`) | `POST /api/v1/payments/{payment_id}/approve` |
+| 8 | `sp_UpdateOwnerPaymentApproval` | `OwnerPaymentApproval.aspx.cs` | `tbl_transactionpayment`, `tbl_transactionappnew` | Sets `OwnerApproval = 1`, `OwnerApprovalDate = NOW()`. | `PaymentService.approve_payment` (`stage="OWNER"`) | `POST /api/v1/payments/{payment_id}/approve` |
+| 9 | `sp_UpdateChequeStatus` (Deposit) | `ChequeClearance.aspx.cs` | `tbl_transactionpayment`, `tbl_transaction` | Marks cheque deposited at bank (`Extra1 = "DEPOSITED"`, `Ischequeclearing = 1`, `ChequeBankStatus = 0`). | `PaymentService.deposit_cheque` | `POST /api/v1/payments/{payment_id}/deposit` |
+| 10 | `sp_UpdateChequeStatus` (Clear) | `ChequeClearance.aspx.cs` | `tbl_transactionpayment`, `tbl_transaction`, `tbl_account` | Marks cheque cleared (`Extra1 = "CLEARED"`, `Ischequeclearing = 0`, `IsChequeCleared = 1`, `ChequeBankStatus = 1`, `CheqBankDate = ClearDate`). | `PaymentService.clear_cheque` | `POST /api/v1/payments/{payment_id}/clear` |
+| 11 | `sp_UpdateChequeStatus` (Bounce) | `ChequeBounce.aspx.cs` | `tbl_transactionpayment`, `tbl_transaction`, `tbl_cutnpaycommpayable` | Marks cheque bounced (`Extra1 = "BOUNCED"`, `isdeleted = "1"`, `Ischequeclearing = 0`, `IsChequeCleared = 0`, `ChequeBankStatus = 2`, `CheqBankDate = BounceDate`), restores `OutstandingAmount`, sets `TStatus = "Pending"`. | `PaymentService.bounce_cheque` | `POST /api/v1/payments/{payment_id}/bounce` |
+| 12 | `sp_InsertChequeBouncePenalty` | `ChequeBounce.aspx.cs` | `tbl_account`, `tbl_transaction` | Posts cheque bounce reversal (`AccTransId = 2`, `-PaidAmount`) and optional dishonor penalty charge (`AccTransId = 4`, `+PenaltyAmount`) in `tbl_account`. | `PaymentService.bounce_cheque` | `POST /api/v1/payments/{payment_id}/bounce` |
+| 13 | `sp_ReverseTransactionPayment` / `sp_DeleteTransactionByTransId` | `adm_DeletePolicyTransaction.aspx.cs` | `tbl_transactionpayment`, `tbl_transaction`, `tbl_account` | Soft-reverses an active payment instrument (`isdeleted = "1"`, `Extra1 = "REVERSED"`), restores `OutstandingAmount`, posts contra `AccTransId = 2` (`-PaidAmount`), and refunds wallet if `EWALLET`. | `PaymentService.reverse_payment` | `POST /api/v1/payments/{payment_id}/reverse` |
+| 14 | `sp_UpdateInsurerReconciliation` | `PolicyTransactionNew.aspx.cs` / Recon screens | `tbl_transaction`, `tbl_account` | Updates `IsRconDataMatch`, `RconGrid`, `RconComm`, `CompSubmitionDocNo`, `CompanyChequeNo`, `IsCompanyChequeNo`, `IB_Doc_No`, `IB_PaymentDate`, `IB_ReceiptStatus`, `IB_PaymentBy`, `accounting_period` and posts `AccTransId = 5`. | `PaymentService.reconcile_insurer_payments` | `POST /api/v1/reconciliation` |
+| 15 | `sp_SelectReconciliationTransactions` | Recon / MIS screens | `tbl_transaction` | Queries policy transactions by reconciliation status (`IsRconDataMatch`, `IB_ReceiptStatus`, `InsuranceCompanyId`, `BranchId`). | `PaymentService.list_reconciliations` | `GET /api/v1/reconciliation` |
+| 16 | `sp_MatchInsurerReconciliationById` | Recon screens | `tbl_transaction`, `tbl_account` | Matches or partially reconciles a single policy transaction against insurer remittance data. | `PaymentService.match_single_reconciliation` | `POST /api/v1/reconciliation/{transaction_id}/match` |
+| 17 | `sp_ReverseInsurerReconciliation` | Recon screens | `tbl_transaction`, `tbl_account` | Reverses reconciliation state on `tbl_transaction` and soft-deletes/reverses `AccTransId = 5`. | `PaymentService.reverse_reconciliation` | `POST /api/v1/reconciliation/{transaction_id}/reverse` |
+| 18 | `sp_GetWalletBalance` | `Service.asmx.cs::GetAgentWalletBalance` | `tbl_ledgermaster`, `tbl_account` | Computes available, locked, total credited, and total debited E-Wallet balance for an Agent or Franchise. | `WalletService.get_wallet` | `GET /api/v1/wallets/{owner_id}` |
+| 19 | `sp_GetWalletLedger` | `Service.asmx.cs::GetWalletLedger` | `tbl_ledgermaster`, `tbl_account` | Returns chronological wallet movement ledger (`TOPUP`, `LOCK`, `RELEASE`, `DEBIT`, `REFUND`). | `WalletService.get_wallet` | `GET /api/v1/wallets/{owner_id}` |
+| 20 | `sp_ApproveEWalletRequest` / `sp_ApproveFranchiseWallet` | `EWalletApproval.aspx.cs`, `FranchiseWallateApproval.aspx.cs` | `tbl_ledgermaster`, `tbl_account` | Credits approved top-up funds (`AccTransId = 10`, `+Amount`) into Agent/Franchise E-Wallet under row lock. | `WalletService.topup_wallet` | `POST /api/v1/wallets/top-up` |
+| 21 | `sp_LockEWalletBalance` | `Service.asmx.cs::InsertAppTransactionNew` | `tbl_ledgermaster`, `tbl_account`, `tbl_transactionappnew` | Reserves wallet funds (`AccTransId = 11`, `-Amount`, `EwalletStatus = 1`) for a policy/proposal under `FOR UPDATE` lock. | `WalletService.lock_wallet_funds` | `POST /api/v1/wallets/{owner_id}/lock` |
+| 22 | `sp_ReleaseEWalletBalance` / `sp_UpdateAgentWalletBalance` | `PolicyTransactionNew.aspx.cs`, `EWalletApproval.aspx.cs` | `tbl_ledgermaster`, `tbl_account`, `tbl_transactionappnew`, `tbl_transaction` | Releases reserved wallet funds (`AccTransId = 12`, `+Amount`) or consumes/debits wallet funds (`AccTransId = 13`, `-Amount`) toward policy payment. | `WalletService.release_wallet_funds`, `WalletService.debit_wallet_funds` | `POST /api/v1/wallets/{owner_id}/release`, `POST /api/v1/wallets/{owner_id}/debit` |
