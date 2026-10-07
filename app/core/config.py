@@ -43,6 +43,12 @@ class Settings(BaseSettings):
     # CORS Configuration
     CORS_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://localhost:8000"]
 
+    # Phase 11 Document & File Storage Configuration (Local-First)
+    STORAGE_BACKEND: str = "local"
+    LOCAL_STORAGE_ROOT: str = "./storage_data"
+    MAX_UPLOAD_SIZE_BYTES: int = 20 * 1024 * 1024
+    POLICY_PARSER_WEBHOOK_SECRET: str = "local-dev-policy-parser-webhook-secret"
+
     @field_validator("DATABASE_URL")
     @classmethod
     def validate_database_url_safety(cls, v: str) -> str:
@@ -64,6 +70,29 @@ class Settings(BaseSettings):
                     f"CRITICAL SAFETY VIOLATION: '{pattern}' detected in DATABASE_URL. "
                     "The legacy production database must NEVER be used as the runtime database of "
                     "Reliable-Insurance-Backend. Local development must use an independent database (e.g., reliable_insurance_dev)."
+                )
+        return v
+
+    @field_validator("LOCAL_STORAGE_ROOT", "STORAGE_BACKEND")
+    @classmethod
+    def validate_storage_safety(cls, v: str) -> str:
+        """
+        Enforce strict file storage isolation rule:
+        Production hosts, production domains, and remote shares must NEVER be used.
+        """
+        forbidden_patterns = [
+            "brahmainsurance",
+            "103.149.199.250",
+            "103.7.181.105",
+            "103.104.73.198",
+            "amazonaws.com",
+        ]
+        lower_v = v.lower()
+        for pattern in forbidden_patterns:
+            if pattern.lower() in lower_v:
+                raise ValueError(
+                    f"CRITICAL SAFETY VIOLATION: '{pattern}' detected in storage configuration. "
+                    "Phase 11 file storage must remain strictly local."
                 )
         return v
 

@@ -8,6 +8,7 @@ from app.api.v1.endpoints import (
     payments,
     commission_accounting,
     claims_endorsements,
+    documents,
 )
 
 api_router = APIRouter()
@@ -65,6 +66,16 @@ api_router.include_router(
     claims_endorsements.refunds_router,
     prefix="/refunds",
     tags=["refunds"],
+)
+
+# Mount Phase 11 Document, File Handling, ZIP & Policy Parser Webhook endpoints
+api_router.include_router(
+    documents.documents_router,
+    prefix="/documents",
+    tags=["documents"],
+)
+api_router.include_router(
+    documents.entity_documents_router,
 )
 
 

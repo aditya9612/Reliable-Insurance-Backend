@@ -55,6 +55,10 @@ from app.models.claims_endorsement import (
     ClaimDocument,
     PolicyEndorsement,
 )
+from app.models.document import (
+    DocumentRecord,
+    PolicyParserWebhookRecord,
+)
 
 __all__ = [
     "Base",
@@ -103,6 +107,8 @@ __all__ = [
     "Claim",
     "ClaimDocument",
     "PolicyEndorsement",
+    "DocumentRecord",
+    "PolicyParserWebhookRecord",
 ]
 
 

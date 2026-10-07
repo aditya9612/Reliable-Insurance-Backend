@@ -582,6 +582,35 @@ REFUND_APPROVE_WRITE_ROLES: FrozenSet[str] = frozenset({
 })
 
 
+# ---------------------------------------------------------------------------
+# 6. Document, File Handling, Download, ZIP & Webhook Role Sets (Phase 11)
+# ---------------------------------------------------------------------------
+
+# Roles permitted to upload or generate documents within their authorized entity scope
+# Read-only roles such as 'pOLICY VIEW' are explicitly excluded from upload/mutation.
+DOCUMENT_UPLOAD_ROLES: FrozenSet[str] = (
+    POLICY_PROPOSAL_WRITE_ROLES
+    | CLAIM_CREATE_ROLES
+    | ENDORSEMENT_CREATE_ROLES
+    | POLICY_PAYMENT_WRITE_ROLES
+    | frozenset({"HR"})
+) - frozenset({"pOLICY VIEW"})
+
+# Roles permitted to view metadata, download single files, or download ZIP archives
+# (subject to strict entity-level branch and principal ownership checks)
+DOCUMENT_READ_ROLES: FrozenSet[str] = CUSTOMER_VEHICLE_READ_ROLES
+
+# Roles permitted to soft-delete or replace documents within their authorized entity scope
+DOCUMENT_DELETE_REPLACE_ROLES: FrozenSet[str] = (
+    GLOBAL_ADMIN_ROLES
+    | CLAIM_UPDATE_ROLES
+    | ENDORSEMENT_APPROVE_APPLY_ROLES
+    | POLICY_BOOKING_WRITE_ROLES
+    | QUOTATION_WRITE_ROLES
+    | POLICY_PAYMENT_WRITE_ROLES
+) - frozenset({"pOLICY VIEW"})
+
+
 
 
 
