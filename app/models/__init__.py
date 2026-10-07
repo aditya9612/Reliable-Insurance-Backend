@@ -63,6 +63,15 @@ from app.models.document import (
     DocumentRecord,
     PolicyParserWebhookRecord,
 )
+from app.models.integration import VehicleRCDetails
+from app.models.renewal import PolicyRenewalStatus, RenewalFollowupHistory
+from app.models.notification import (
+    SMSLog,
+    PushNotificationLog,
+    MessageMaster,
+    MessageDetail,
+    OTPLog,
+)
 
 __all__ = [
     "Base",
@@ -117,7 +126,12 @@ __all__ = [
     "PolicyEndorsement",
     "DocumentRecord",
     "PolicyParserWebhookRecord",
+    "VehicleRCDetails",
+    "PolicyRenewalStatus",
+    "RenewalFollowupHistory",
+    "SMSLog",
+    "PushNotificationLog",
+    "MessageMaster",
+    "MessageDetail",
+    "OTPLog",
 ]
-
-
-

@@ -49,6 +49,36 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_BYTES: int = 20 * 1024 * 1024
     POLICY_PARSER_WEBHOOK_SECRET: str = "local-dev-policy-parser-webhook-secret"
 
+    # Phase 13 External Integrations & Providers Configuration (Local-First Mock Defaults)
+    RC_PROVIDER_TYPE: str = "mock"
+    RC_API_KEY: str = "mock-rc-api-key"
+    RC_BASE_URL: str = "https://mock.apiclub.in/api/v1/rc_info"
+    SIGNZY_BASE_URL: str = "https://mock.signzy.app/api/v3/vehicle/detailedsearches"
+    SIGNZY_API_KEY: str = "mock-signzy-api-key"
+
+    SMS_PROVIDER_TYPE: str = "mock"
+    FAST2SMS_API_KEY: str = "mock-fast2sms-api-key"
+    FAST2SMS_BASE_URL: str = "https://www.fast2sms.com/dev/bulkV2"
+    INDIATEXT_USER: str = "mock_relass"
+    INDIATEXT_PASSWORD: str = "mock_password"
+    INDIATEXT_BASE_URL: str = "http://sms.indiatext.in/api/mt/SendSMS"
+
+    PUSH_PROVIDER_TYPE: str = "mock"
+    ONESIGNAL_APP_ID: str = "mock-onesignal-app-id"
+    ONESIGNAL_REST_API_KEY: str = "mock-onesignal-rest-api-key"
+    ONESIGNAL_BASE_URL: str = "https://onesignal.com/api/v1/notifications"
+
+    EMAIL_PROVIDER_TYPE: str = "mock"
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = "mock.reliable.mis1@gmail.com"
+    SMTP_PASSWORD: str = "mock-smtp-app-password"
+    SMTP_FROM_EMAIL: str = "reliable.mis1@gmail.com"
+
+    OTP_TTL_SECONDS: int = 300
+    OTP_MAX_ATTEMPTS: int = 3
+    OTP_RESEND_COOLDOWN_SECONDS: int = 60
+
     @field_validator("DATABASE_URL")
     @classmethod
     def validate_database_url_safety(cls, v: str) -> str:

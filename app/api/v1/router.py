@@ -11,6 +11,9 @@ from app.api.v1.endpoints import (
     documents,
     masters,
     search,
+    integrations,
+    notifications,
+    renewals,
 )
 
 api_router = APIRouter()
@@ -93,6 +96,28 @@ api_router.include_router(
     prefix="/search",
     tags=["search"],
 )
+
+# Mount Phase 13 External Integrations & Vehicle RC endpoints
+api_router.include_router(
+    integrations.router,
+    prefix="/integrations",
+    tags=["integrations"],
+)
+
+# Mount Phase 13 Outbound Notifications & Messaging endpoints
+api_router.include_router(
+    notifications.router,
+    prefix="/notifications",
+    tags=["notifications"],
+)
+
+# Mount Phase 13 Policy Renewal Engine & Telecaller CRM endpoints
+api_router.include_router(
+    renewals.router,
+    prefix="/renewals",
+    tags=["renewals"],
+)
+
 
 
 

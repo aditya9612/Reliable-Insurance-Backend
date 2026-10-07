@@ -611,6 +611,75 @@ DOCUMENT_DELETE_REPLACE_ROLES: FrozenSet[str] = (
 ) - frozenset({"pOLICY VIEW"})
 
 
+# ---------------------------------------------------------------------------
+# 7. Integrations, Notifications & Renewal Role Sets (Phase 13)
+# ---------------------------------------------------------------------------
+
+# Roles permitted to lookup Vehicle RC via external providers / 3-tier cascade
+VEHICLE_RC_LOOKUP_ROLES: FrozenSet[str] = (
+    CUSTOMER_VEHICLE_READ_ROLES
+) - frozenset({"CUSTOMER"})
+
+# Roles permitted to trigger ad-hoc SMS or Push notifications
+NOTIFICATION_ADMIN_ROLES: FrozenSet[str] = (
+    GLOBAL_ADMIN_ROLES
+    | frozenset({
+        "MANAGER",
+        "LOCATION HEAD",
+        "BUSINESS HEAD",
+        "GENERAL MANAGER",
+        "OPERATOR HEAD",
+        "BRANCH_MANAGER",
+    })
+)
+
+# Roles permitted to trigger renewal Excel reports via email
+RENEWAL_EMAIL_ROLES: FrozenSet[str] = (
+    NOTIFICATION_ADMIN_ROLES
+    | frozenset({
+        "OPERATOR",
+        "BACK OFFICE",
+        "SUPERVISOR",
+        "CallIng Employee",
+        "Calling Indivisional",
+    })
+)
+
+# Roles permitted to view, follow up, and update renewal statuses in telecaller CRM
+RENEWAL_TELECALLER_ROLES: FrozenSet[str] = (
+    GLOBAL_ADMIN_ROLES
+    | frozenset({
+        "OPERATOR",
+        "OPERATOR HEAD",
+        "SUPERVISOR",
+        "MANAGER",
+        "CallIng Employee",
+        "Calling Indivisional",
+        "BACK OFFICE",
+        "ALL USER",
+    })
+)
+
+# Roles permitted to access the renewal executive dashboard
+RENEWAL_DASHBOARD_ROLES: FrozenSet[str] = (
+    GLOBAL_ADMIN_ROLES
+    | frozenset({
+        "SUPERVISOR",
+        "MANAGER",
+        "LOCATION HEAD",
+        "BUSINESS HEAD",
+        "GENERAL MANAGER",
+        "STATE HEAD",
+        "REGIONAL HEAD",
+        "ZONAL HEAD",
+        "BRANCH_MANAGER",
+        "SHREYANSH OWNER",
+    })
+    | EMPLOYEE_PRINCIPAL_ROLES
+)
+
+
+
 
 
 
