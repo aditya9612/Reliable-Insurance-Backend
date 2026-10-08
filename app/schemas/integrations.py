@@ -21,6 +21,10 @@ class VehicleRCLookupRequest(BaseModel):
         default=False,
         description="Whether to bypass local cache and force an external provider query",
     )
+    provider: Optional[str] = Field(
+        default=None,
+        description="Optional RC provider override: mock, apiclub, signzy, or attestr",
+    )
 
 
 class VehicleRCData(BaseModel):

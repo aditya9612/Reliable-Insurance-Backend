@@ -123,6 +123,10 @@ class Agent(Base):
     IsActive: Mapped[int] = mapped_column("IsActive", Integer, nullable=False, default=1)
     kyc_status: Mapped[str] = mapped_column("kyc_status", String(20), nullable=False, default="PENDING")
     kyc_remarks: Mapped[Optional[str]] = mapped_column("kyc_remarks", String(255), nullable=True)
+    ParentAgentId: Mapped[Optional[int]] = mapped_column("ParentAgentId", Integer, nullable=True)
+    SubAgentSplitPercent: Mapped[Optional[Decimal]] = mapped_column(
+        "SubAgentSplitPercent", Numeric(6, 2), nullable=True, default=Decimal("0.00")
+    )
     CreateDate: Mapped[Optional[datetime]] = mapped_column("CreateDate", DateTime, nullable=True, default=datetime.utcnow)
     CreateUser: Mapped[Optional[str]] = mapped_column("CreateUser", String(100), nullable=True)
     UpdateDate: Mapped[Optional[datetime]] = mapped_column("UpdateDate", DateTime, nullable=True, onupdate=datetime.utcnow)

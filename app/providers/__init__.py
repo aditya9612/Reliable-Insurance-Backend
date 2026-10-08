@@ -16,6 +16,7 @@ from app.providers.mock_providers import (
 )
 from app.providers.apiclub import APIClubRCProvider
 from app.providers.signzy import SignzyRCProvider
+from app.providers.attestr import AttestrRCProvider
 from app.providers.sms_adapters import Fast2SMSProvider, IndiaTextProvider
 from app.providers.onesignal import OneSignalPushProvider
 from app.providers.smtp_adapter import SMTPEmailProvider
@@ -33,6 +34,20 @@ def get_vehicle_rc_provider() -> VehicleRCProvider:
         return APIClubRCProvider()
     elif settings.RC_PROVIDER_TYPE == "signzy":
         return SignzyRCProvider()
+    elif settings.RC_PROVIDER_TYPE == "attestr":
+        return AttestrRCProvider()
+    return default_mock_rc_provider
+
+
+def resolve_vehicle_rc_provider(provider_name: str | None = None) -> VehicleRCProvider:
+    """Resolve explicit RC provider adapter by name or fall back to configured default."""
+    selected = (provider_name or settings.RC_PROVIDER_TYPE or "mock").strip().lower()
+    if selected == "apiclub":
+        return APIClubRCProvider()
+    if selected == "signzy":
+        return SignzyRCProvider()
+    if selected == "attestr":
+        return AttestrRCProvider()
     return default_mock_rc_provider
 
 
@@ -70,6 +85,7 @@ __all__ = [
     "MockEmailProvider",
     "APIClubRCProvider",
     "SignzyRCProvider",
+    "AttestrRCProvider",
     "Fast2SMSProvider",
     "IndiaTextProvider",
     "OneSignalPushProvider",
@@ -79,6 +95,7 @@ __all__ = [
     "default_mock_push_provider",
     "default_mock_email_provider",
     "get_vehicle_rc_provider",
+    "resolve_vehicle_rc_provider",
     "get_sms_provider",
     "get_push_provider",
     "get_email_provider",

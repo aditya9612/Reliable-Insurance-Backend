@@ -89,6 +89,16 @@ from app.models.utility import (
     HealthMember,
     ImportAgentPolicy,
 )
+from app.models.phase18a_features import (
+    IdealPaymentReceipt,
+    CommissionRateGrid,
+    RemainingPendingCash,
+    SalesRegistration,
+    InspectionCoordinatorRequest,
+    SupportTicket,
+    CallingImportLead,
+    CashbackEntry,
+)
 
 __all__ = [
     "Base",
@@ -165,4 +175,12 @@ __all__ = [
     "IDVRequest",
     "HealthMember",
     "ImportAgentPolicy",
+    "IdealPaymentReceipt",
+    "CommissionRateGrid",
+    "RemainingPendingCash",
+    "SalesRegistration",
+    "InspectionCoordinatorRequest",
+    "SupportTicket",
+    "CallingImportLead",
+    "CashbackEntry",
 ]

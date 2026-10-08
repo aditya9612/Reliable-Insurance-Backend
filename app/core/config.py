@@ -49,12 +49,26 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_BYTES: int = 20 * 1024 * 1024
     POLICY_PARSER_WEBHOOK_SECRET: str = "local-dev-policy-parser-webhook-secret"
 
-    # Phase 13 External Integrations & Providers Configuration (Local-First Mock Defaults)
+    # Phase 13 & 18A External Integrations & Providers Configuration (Local-First Mock Defaults)
     RC_PROVIDER_TYPE: str = "mock"
     RC_API_KEY: str = "mock-rc-api-key"
     RC_BASE_URL: str = "https://mock.apiclub.in/api/v1/rc_info"
     SIGNZY_BASE_URL: str = "https://mock.signzy.app/api/v3/vehicle/detailedsearches"
     SIGNZY_API_KEY: str = "mock-signzy-api-key"
+    ATTESTR_BASE_URL: str = "https://mock.attestr.com/api/v1/public/checkx/rc"
+    ATTESTR_API_KEY: str = "mock-attestr-api-key"
+
+    HICALIBER_PROVIDER_TYPE: str = "mock"
+    HICALIBER_PRESIGNED_URL: str = "https://mock.hicaliber.in/motor-policy/ext/async/policy-presigned-url/"
+    HICALIBER_EXTRACT_URL: str = "https://mock.hicaliber.in/motor-policy/ext/async/extract-policy/ideal/"
+    HICALIBER_API_TOKEN: str = "mock-hicaliber-api-token"
+
+    GEOCODE_PROVIDER_TYPE: str = "mock"
+    GOOGLE_MAPS_GEOCODE_URL: str = "https://maps.googleapis.com/maps/api/geocode/json"
+    GOOGLE_MAPS_API_KEY: str = "mock-google-maps-api-key"
+
+    RELIANCE_CAPPING_MAX_TOTAL_PCT: float = 90.0
+    RELIANCE_MAX_OD_DISCOUNT_PCT: float = 60.0
 
     SMS_PROVIDER_TYPE: str = "mock"
     FAST2SMS_API_KEY: str = "mock-fast2sms-api-key"
