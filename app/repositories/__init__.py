@@ -21,8 +21,12 @@ from app.repositories.master import (
     VehicleVariantRepository,
     RTORepository,
     InsuranceCompanyRepository,
+    FuelTypeRepository,
+    FinancierRepository,
+    SurveyorRepository,
 )
-
+from app.repositories.login_history import LoginHistoryRepository
+from app.repositories.privilege import PrivilegeRepository
 from app.repositories.profile_repository import ProfileRepository
 from app.repositories.utility_repository import UtilityRepository
 
@@ -47,6 +51,11 @@ __all__ = [
     "VehicleVariantRepository",
     "RTORepository",
     "InsuranceCompanyRepository",
+    "FuelTypeRepository",
+    "FinancierRepository",
+    "SurveyorRepository",
+    "LoginHistoryRepository",
+    "PrivilegeRepository",
     "ProfileRepository",
     "UtilityRepository",
 ]

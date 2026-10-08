@@ -1,0 +1,37 @@
+# PHASE 16 — DATABASE & SCHEMA GAP MATRIX
+## Reliable-Insurance-Backend: Physical Database Schema & Model Reconciliation
+
+---
+
+### 1. Executive Summary
+- **Current Database Head**: Alembic `f15b0c3d1501` (68 physical tables)
+- **Phase 16 Audited Tables**: 11 physical MySQL tables
+  - **Currently Modeled & Active in FastAPI**: 5 tables (`tbl_user`, `tbl_userrole`, `tbl_employee`, `tbl_agent`, `tbl_franchise`)
+  - **Target Auxiliary Tables for Phase 16**: 6 tables (`tbl_loginhistory`, `tbl_role_privilege`, `tbl_fueltype`, `tbl_financier`, `tbl_surveyor`, `tbl_menu`)
+- **DDL Integrity**: All models preserve exact verified MySQL table/column names, case conventions, types, and DYNAMIC row formats without artificial foreign key constraints.
+
+---
+
+### 2. Comprehensive Database Gap Matrix
+
+| # | Table Name | Columns Count & Key Definitions | Primary Key | Indexes | Existing FastAPI Model | Missing Model Fields | CRUD Coverage | Stored Procedure Usage | API Usage | Migration Status | Evidence |
+|---|---|---|---|---|---|---|---|---|---|:---:|---|
+| 1 | `tbl_user` | 13 columns (`UserId`, `UserName`, `UserPassword`, `UserRoleId`, `BranchId`, `isappuser`, `isdeleted`, `CreateDate`, `CreateUser`, `UpdateDate`, `UpdateUser`, `partner_user_id`, `mobile_no`) | `UserId` (int autoincrement) | `fk_UserRoleId`, `fk_BranchId`, `uq_UserName` | `User` (`app/models/user.py`) | None (13/13 verified columns modeled) | Partial (Auth login, verify; admin CRUD missing) | `sp_CheckLogin`, `sp_UserOperation`, `sp_CheckUsername`, `sp_UserByBranchRole` | `/api/v1/auth/login`, `/me`, `/admin-check` | **ACTIVE** (Model complete, APIs partial) | `app/models/user.py:35` |
+| 2 | `tbl_userrole` | 4 columns (`UserRoleId`, `UserRole`, `code`, `isdeleted`) | `UserRoleId` (int autoincrement) | PK index | `UserRole` (`app/models/user.py`) | None (4/4 verified columns modeled) | Read-only (Role lookup; CRUD missing) | `sp_UserRole`, `Sp_SelectReferenceTypeByUserRole` | Internal RBAC validation | **ACTIVE** (Model complete, APIs partial) | `app/models/user.py:9` |
+| 3 | `tbl_employee` | 31 columns (`EmpId`, `UserName`, `UserPassword`, `EmpCode`, `EmpFName`, `EmpMName`, `EmpLName`, `AddrLine1`, `AddrLine2`, `TalukaId`, `StateId`, `DistrictId`, `Gender`, `MaritalStatus`, `MoblieNo`, `MoblieNo1`, `EmailId`, `PAN_No`, `AadharNo`, `BankId`, `BankBranch`, `Ifsc_code`, `accountNo`, `BranchId`, `UserRoleId`, `UserId`, `CreateDate`, `CreateUser`, `UpdateDate`, `UpdateUser`, `isdeleted`) | `EmpId` (int autoincrement) | `ix_EmpCode`, `ix_BranchId`, `ix_UserId`, `ix_UserRoleId`, `ix_isdeleted` | `Employee` (`app/models/profile.py`) | Hierarchy strings (`Hei_Data`, `Hie_DataSales`, `Hie_DataOprn`) | Full CRUD (`/api/v1/employees`) | `sp_generateEmpCode`, `sp_SelectPrevYearEmp` | `POST/GET/PUT/DELETE /api/v1/employees` | **ACTIVE** (Phase 15B) | `app/models/profile.py:16` |
+| 4 | `tbl_agent` | 25 columns (`AgentId`, `AgentCode`, `AgentFName`, `AgentMName`, `AgentLName`, `NickName`, `Champanion`, `MobileNo`, `EmailId`, `PANNo`, `AadharNo`, `SalesExecutiveId`, `CoordinatorId`, `FranchiseId`, `BranchId`, `UserId`, `BankId`, `BankBranch`, `Ifsc_code`, `accountNo`, `IsActive`, `CreateDate`, `CreateUser`, `UpdateDate`, `UpdateUser`, `isdeleted`) | `AgentId` (int autoincrement) | `ix_AgentCode`, `ix_SalesExecutiveId`, `ix_CoordinatorId`, `ix_FranchiseId`, `ix_BranchId`, `ix_UserId`, `ix_isdeleted` | `Agent` (`app/models/profile.py`) | Nominee name, License details | Full CRUD (`/api/v1/agents`) | `sp_InsertAgent`, `sp_selectFranchiseAgentInfo` | `POST/GET/PUT/DELETE /api/v1/agents` | **ACTIVE** (Phase 15B) | `app/models/profile.py:78` |
+| 5 | `tbl_franchise` | 24 columns (`FranchiseId`, `UserName`, `UserPassword`, `initial`, `FranFName`, `FranMName`, `FranLName`, `FranCode`, `PerAddrLine1`, `PerAddrLine2`, `PerTalukaId`, `PerDistrictId`, `PerStateId`, `PerPinCode`, `MoblieNo1`, `MoblieNo2`, `Gender`, `MaritalStatus`, `PAN_No`, `AadharNo`, `BankId`, `NominieeName`, `Bank_branch`, `Ifsc_code`, `accountNo`, `DateOfBirth`, `EmailId`, `BranchId`, `ParentFranchiseId`, `CoordinatorId`, `QuotationCo_Id`, `InspectionCo_Id`, `EndrosmentCo_Id`, `UserRoleId`, `CreateDate`, `CreateUser`, `UpdateDate`, `UpdateUser`, `isdeleted`) | `FranchiseId` (int autoincrement) | `ix_FranCode`, `ix_BranchId`, `ix_ParentFranchiseId`, `ix_isdeleted` | `Franchise` (`app/models/profile.py`) | None | Full CRUD (`/api/v1/franchises`) | `Sp_CheckloginfrFranchaise`, `sp_InsertFranchise` | `POST/GET/PUT/DELETE /api/v1/franchises` | **ACTIVE** (Phase 15B) | `app/models/profile.py:137` |
+| 6 | `tbl_loginhistory` | 8 columns (`LoginHistoryId`, `UserId`, `UserName`, `LogInOrLogOut`, `funPerform`, `IPAddress`, `CreateDate`, `Remark`) | `LoginHistoryId` (int autoincrement) | `ix_UserId`, `ix_CreateDate` | **None** (Target model: `LoginHistory`) | Entire model | None | `sp_insertLoginHistory`, `sp_SelectLoginHistory` | Target `/api/v1/auth/login-history` | **UNMODELED** (Candidate for Phase 16B) | `Log_In.aspx.cs:50`, `AllMaster.cs:9` |
+| 7 | `tbl_role_privilege` | 6 columns (`Id`, `BranchId`, `RoleId`, `ScreenId`, `CreateDate`, `isdeleted`) | `Id` (int autoincrement) | `ix_BranchId_RoleId`, `ix_ScreenId` | **None** (Target model: `RolePrivilege`) | Entire model | None | `sp_insert_role_privilege`, `sp_delete_role_privilege` | Target `/api/v1/admin/privileges` | **UNMODELED** (Candidate for Phase 16B) | `Adm_RolePrivilege.aspx.cs:50` |
+| 8 | `tbl_menu` | 6 columns (`MenuId`, `MenuName`, `MenuUrl`, `ParentMenuId`, `OrderNo`, `isdeleted`) | `MenuId` (int autoincrement) | `ix_ParentMenuId` | **None** (Target model: `MenuMaster`) | Entire model | None | `sp_SelectUserRightsByRoleId` | Target `/api/v1/admin/menus` | **UNMODELED** (Candidate for Phase 16B) | `Clerk.Master.cs:75` |
+| 9 | `tbl_fueltype` | 4 columns (`FuelTypeId`, `FuelType`, `isdeleted`, `CreateDate`) | `FuelTypeId` (int autoincrement) | `ix_isdeleted` | **None** (Target model: `FuelType`) | Entire model | None | `sp_SelectFuelType` | Target `/api/v1/masters/fuel-types` | **UNMODELED** (Candidate for Phase 16B) | `mst_FuelType.aspx.cs:30` |
+| 10 | `tbl_financier` | 8 columns (`FinancierId`, `FinancierName`, `BranchId`, `ContactNo`, `EmailId`, `Address`, `isdeleted`, `CreateDate`) | `FinancierId` (int autoincrement) | `ix_BranchId`, `ix_isdeleted` | **None** (Target model: `Financier`) | Entire model | None | `sp_SelectFinancier` | Target `/api/v1/masters/financiers` | **UNMODELED** (Candidate for Phase 16B) | `mst_Financier.aspx.cs:40` |
+| 11 | `tbl_surveyor` | 16 columns (`SurveyorId`, `SurveyorName`, `ContactNo`, `EmailId`, `LicenseNo`, `LicenseExpiryDate`, `Address`, `City`, `StateId`, `BranchId`, `BankId`, `AccountNo`, `IFSC_Code`, `isdeleted`, `CreateDate`, `UpdateDate`) | `SurveyorId` (int autoincrement) | `ix_BranchId`, `ix_LicenseNo`, `ix_isdeleted` | **None** (Target model: `Surveyor`) | Entire model | None | `Sp_GarageSurvey_Operations`, `Sp_Spot_Servey_Operations` | Target `/api/v1/masters/surveyors` | **UNMODELED** (Candidate for Phase 16B) | `mst_Surveyor.aspx.cs:50` |
+
+---
+
+### 3. Quantitative Database Summary
+- **Physical Tables in FastAPI Baseline**: **68 tables**
+- **Tables Modeled in Phase 16 Scope**: **5 tables (45.5%)**
+- **Target Unmodeled Tables in Phase 16 Scope**: **6 tables (54.5%)**
+- **Physical Foreign Key Invariant**: 0 physical MySQL foreign key constraints across all audited tables (matches 100% of legacy schemas; referential integrity maintained via application logic).

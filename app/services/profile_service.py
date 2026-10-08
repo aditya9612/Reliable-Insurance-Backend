@@ -13,10 +13,13 @@ from app.repositories.profile_repository import ProfileRepository
 from app.schemas.profile import (
     EmployeeCreate,
     EmployeeUpdate,
+    EmployeeHierarchyUpdateRequest,
     AgentCreate,
     AgentUpdate,
+    AgentKYCUpdateRequest,
     FranchiseCreate,
     FranchiseUpdate,
+    FranchiseHierarchyNode,
 )
 
 
@@ -335,3 +338,110 @@ class ProfileService:
             )
         await self.session.commit()
         return True
+
+    async def update_employee_hierarchy(
+        self, emp_id: int, payload: EmployeeHierarchyUpdateRequest, current_user: User
+    ) -> Employee:
+        """Update staff organizational hierarchy strings."""
+        if not self._is_admin(current_user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only HR or Administrative roles can update employee hierarchy.",
+            )
+
+        emp = await self.get_employee(emp_id, current_user)
+        if payload.Hei_Data is not None:
+            emp.Hei_Data = payload.Hei_Data
+        if payload.Hie_DataSales is not None:
+            emp.Hie_DataSales = payload.Hie_DataSales
+        if payload.Hie_DataOprn is not None:
+            emp.Hie_DataOprn = payload.Hie_DataOprn
+
+        emp.UpdateDate = datetime.utcnow()
+        emp.UpdateUser = current_user.UserName or "ADMIN"
+        await self.session.commit()
+        await self.session.refresh(emp)
+        return emp
+
+    async def update_agent_kyc(
+        self, agent_id: int, payload: AgentKYCUpdateRequest, current_user: User
+    ) -> Agent:
+        """
+        Enforce Agent KYC 3-state state machine:
+        PENDING -> VERIFIED / REJECTED.
+        Terminal states cannot transition again. Invalid transitions rejected with 400.
+        """
+        if not self._is_admin(current_user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only HR or Administrative roles can update agent KYC status.",
+            )
+
+        agent = await self.get_agent(agent_id, current_user)
+        target_status = payload.kyc_status.strip().upper()
+        if target_status not in ("VERIFIED", "REJECTED"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Target KYC status must be VERIFIED or REJECTED",
+            )
+
+        current_status = (agent.kyc_status or "PENDING").strip().upper()
+        if current_status != "PENDING":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid KYC status transition from {current_status} to {target_status}. KYC status cannot be transitioned once verified or rejected.",
+            )
+
+        agent.kyc_status = target_status
+        agent.kyc_remarks = payload.kyc_remarks
+        agent.UpdateDate = datetime.utcnow()
+        agent.UpdateUser = current_user.UserName or "ADMIN"
+        await self.session.commit()
+        await self.session.refresh(agent)
+        return agent
+
+    async def get_franchise_hierarchy(
+        self, franchise_id: int, current_user: User
+    ) -> FranchiseHierarchyNode:
+        """
+        Builds recursive franchise partner hierarchy tree with cycle detection and depth limit (max 10).
+        """
+        root = await self.get_franchise(franchise_id, current_user)
+
+        async def build_tree(
+            fran: Franchise, current_depth: int, visited: set
+        ) -> FranchiseHierarchyNode:
+            if current_depth >= 10:
+                return FranchiseHierarchyNode(
+                    FranchiseId=fran.FranchiseId,
+                    FranCode=fran.FranCode,
+                    FranFName=fran.FranFName,
+                    FranMName=fran.FranMName,
+                    FranLName=fran.FranLName,
+                    ParentFranchiseId=fran.ParentFranchiseId,
+                    BranchId=fran.BranchId,
+                    depth=current_depth,
+                    children=[],
+                )
+
+            visited.add(fran.FranchiseId)
+            children_frans = await self.repo.list_franchises(parent_id=fran.FranchiseId, limit=100)
+            child_nodes = []
+            for child in children_frans:
+                if child.FranchiseId not in visited:
+                    child_node = await build_tree(child, current_depth + 1, visited.copy())
+                    child_nodes.append(child_node)
+
+            return FranchiseHierarchyNode(
+                FranchiseId=fran.FranchiseId,
+                FranCode=fran.FranCode,
+                FranFName=fran.FranFName,
+                FranMName=fran.FranMName,
+                FranLName=fran.FranLName,
+                ParentFranchiseId=fran.ParentFranchiseId,
+                BranchId=fran.BranchId,
+                depth=current_depth,
+                children=child_nodes,
+            )
+
+        return await build_tree(root, 0, set())

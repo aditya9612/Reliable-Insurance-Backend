@@ -1,3 +1,4 @@
+from datetime import datetime, date
 from typing import Optional, Dict, Any, List
 from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field
@@ -341,3 +342,90 @@ class BankResponse(BaseModel):
     BankId: int
     BankName: str
     isdeleted: int = 0
+
+
+# ---------------------------------------------------------------------------
+# BLOCK 4: Phase 16B Directories: FuelType, Financier, Surveyor
+# ---------------------------------------------------------------------------
+
+class FuelTypeBase(BaseModel):
+    FuelType: str
+
+
+class FuelTypeCreate(FuelTypeBase):
+    pass
+
+
+class FuelTypeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    FuelTypeId: int
+    FuelType: Optional[str] = None
+    isdeleted: str = "0"
+    is_active: bool = True
+    CreateDate: Optional[datetime] = None
+
+
+class FinancierBase(BaseModel):
+    FinancierName: str
+    BranchId: Optional[int] = None
+    ContactNo: Optional[str] = None
+    EmailId: Optional[str] = None
+    Address: Optional[str] = None
+
+
+class FinancierCreate(FinancierBase):
+    pass
+
+
+class FinancierResponse(FinancierBase):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    FinancierId: int
+    isdeleted: str = "0"
+    is_active: bool = True
+    CreateDate: Optional[datetime] = None
+
+
+class SurveyorBase(BaseModel):
+    SurveyorName: str
+    ContactNo: Optional[str] = None
+    EmailId: Optional[str] = None
+    LicenseNo: Optional[str] = None
+    LicenseExpiryDate: Optional[date] = None
+    Address: Optional[str] = None
+    City: Optional[str] = None
+    StateId: Optional[int] = None
+    BranchId: Optional[int] = None
+    BankId: Optional[int] = None
+    AccountNo: Optional[str] = None
+    IFSC_Code: Optional[str] = None
+
+
+class SurveyorCreate(SurveyorBase):
+    pass
+
+
+class SurveyorUpdate(BaseModel):
+    SurveyorName: Optional[str] = None
+    ContactNo: Optional[str] = None
+    EmailId: Optional[str] = None
+    LicenseNo: Optional[str] = None
+    LicenseExpiryDate: Optional[date] = None
+    Address: Optional[str] = None
+    City: Optional[str] = None
+    StateId: Optional[int] = None
+    BranchId: Optional[int] = None
+    BankId: Optional[int] = None
+    AccountNo: Optional[str] = None
+    IFSC_Code: Optional[str] = None
+
+
+class SurveyorResponse(SurveyorBase):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    SurveyorId: int
+    isdeleted: str = "0"
+    is_active: bool = True
+    CreateDate: Optional[datetime] = None
+    UpdateDate: Optional[datetime] = None

@@ -1,5 +1,6 @@
+from datetime import datetime, date
 from typing import Optional
-from sqlalchemy import Integer, String, Text, Index, text
+from sqlalchemy import Integer, String, Text, DateTime, Date, Index, text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 
@@ -384,3 +385,105 @@ class BankMaster(Base):
     BankName: Mapped[str] = mapped_column("BankName", String(255), nullable=False)
     isdeleted: Mapped[int] = mapped_column("isdeleted", Integer, nullable=False, server_default=text("0"))
 
+
+class FuelType(Base):
+    """
+    Vehicle Fuel Type Reference Master Model
+    Physical Table: tbl_fueltype
+    Physical PK: FuelTypeId
+    Verified Column Count: 4
+    Physical Foreign Keys: 0
+    """
+    __tablename__ = "tbl_fueltype"
+    __table_args__ = (
+        Index("ix_tbl_fueltype_isdeleted", "isdeleted"),
+        {
+            "mysql_charset": "utf8",
+            "mysql_collate": "utf8_general_ci",
+            "mysql_row_format": "DYNAMIC",
+        },
+    )
+
+    FuelTypeId: Mapped[int] = mapped_column("FuelTypeId", Integer, primary_key=True, autoincrement=True)
+    FuelType: Mapped[Optional[str]] = mapped_column("FuelType", String(50), nullable=True)
+    isdeleted: Mapped[str] = mapped_column("isdeleted", String(10), nullable=False, default="0")
+    CreateDate: Mapped[Optional[datetime]] = mapped_column("CreateDate", DateTime, nullable=True, default=datetime.utcnow)
+
+    @property
+    def is_active(self) -> bool:
+        return str(self.isdeleted).strip() != "1"
+
+
+class Financier(Base):
+    """
+    Financier / Banking Institution Directory Master Model
+    Physical Table: tbl_financier
+    Physical PK: FinancierId
+    Verified Column Count: 8
+    Physical Foreign Keys: 0
+    """
+    __tablename__ = "tbl_financier"
+    __table_args__ = (
+        Index("ix_tbl_financier_BranchId", "BranchId"),
+        Index("ix_tbl_financier_isdeleted", "isdeleted"),
+        {
+            "mysql_charset": "utf8",
+            "mysql_collate": "utf8_general_ci",
+            "mysql_row_format": "DYNAMIC",
+        },
+    )
+
+    FinancierId: Mapped[int] = mapped_column("FinancierId", Integer, primary_key=True, autoincrement=True)
+    FinancierName: Mapped[Optional[str]] = mapped_column("FinancierName", String(255), nullable=True)
+    BranchId: Mapped[Optional[int]] = mapped_column("BranchId", Integer, nullable=True)
+    ContactNo: Mapped[Optional[str]] = mapped_column("ContactNo", String(50), nullable=True)
+    EmailId: Mapped[Optional[str]] = mapped_column("EmailId", String(100), nullable=True)
+    Address: Mapped[Optional[str]] = mapped_column("Address", String(255), nullable=True)
+    isdeleted: Mapped[str] = mapped_column("isdeleted", String(10), nullable=False, default="0")
+    CreateDate: Mapped[Optional[datetime]] = mapped_column("CreateDate", DateTime, nullable=True, default=datetime.utcnow)
+
+    @property
+    def is_active(self) -> bool:
+        return str(self.isdeleted).strip() != "1"
+
+
+class Surveyor(Base):
+    """
+    Insurance Claim Surveyor Directory Master Model
+    Physical Table: tbl_surveyor
+    Physical PK: SurveyorId
+    Verified Column Count: 16
+    Physical Foreign Keys: 0
+    """
+    __tablename__ = "tbl_surveyor"
+    __table_args__ = (
+        Index("ix_tbl_surveyor_BranchId", "BranchId"),
+        Index("ix_tbl_surveyor_LicenseNo", "LicenseNo"),
+        Index("ix_tbl_surveyor_isdeleted", "isdeleted"),
+        {
+            "mysql_charset": "utf8",
+            "mysql_collate": "utf8_general_ci",
+            "mysql_row_format": "DYNAMIC",
+        },
+    )
+
+    SurveyorId: Mapped[int] = mapped_column("SurveyorId", Integer, primary_key=True, autoincrement=True)
+    SurveyorName: Mapped[Optional[str]] = mapped_column("SurveyorName", String(100), nullable=True)
+    ContactNo: Mapped[Optional[str]] = mapped_column("ContactNo", String(50), nullable=True)
+    EmailId: Mapped[Optional[str]] = mapped_column("EmailId", String(100), nullable=True)
+    LicenseNo: Mapped[Optional[str]] = mapped_column("LicenseNo", String(50), nullable=True)
+    LicenseExpiryDate: Mapped[Optional[date]] = mapped_column("LicenseExpiryDate", Date, nullable=True)
+    Address: Mapped[Optional[str]] = mapped_column("Address", String(255), nullable=True)
+    City: Mapped[Optional[str]] = mapped_column("City", String(100), nullable=True)
+    StateId: Mapped[Optional[int]] = mapped_column("StateId", Integer, nullable=True)
+    BranchId: Mapped[Optional[int]] = mapped_column("BranchId", Integer, nullable=True)
+    BankId: Mapped[Optional[int]] = mapped_column("BankId", Integer, nullable=True)
+    AccountNo: Mapped[Optional[str]] = mapped_column("AccountNo", String(50), nullable=True)
+    IFSC_Code: Mapped[Optional[str]] = mapped_column("IFSC_Code", String(50), nullable=True)
+    isdeleted: Mapped[str] = mapped_column("isdeleted", String(10), nullable=False, default="0")
+    CreateDate: Mapped[Optional[datetime]] = mapped_column("CreateDate", DateTime, nullable=True, default=datetime.utcnow)
+    UpdateDate: Mapped[Optional[datetime]] = mapped_column("UpdateDate", DateTime, nullable=True, onupdate=datetime.utcnow)
+
+    @property
+    def is_active(self) -> bool:
+        return str(self.isdeleted).strip() != "1"

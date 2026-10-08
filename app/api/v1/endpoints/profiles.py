@@ -9,13 +9,16 @@ from app.models.user import User
 from app.schemas.profile import (
     EmployeeCreate,
     EmployeeUpdate,
+    EmployeeHierarchyUpdateRequest,
     EmployeeResponse,
     AgentCreate,
     AgentUpdate,
+    AgentKYCUpdateRequest,
     AgentResponse,
     FranchiseCreate,
     FranchiseUpdate,
     FranchiseResponse,
+    FranchiseHierarchyNode,
     mask_employee_pii,
     mask_agent_pii,
     mask_franchise_pii,
@@ -124,6 +127,24 @@ async def update_employee(
     return resp if is_privileged_for_pii(current_user) else mask_employee_pii(resp)
 
 
+@employees_router.put(
+    "/{id}/hierarchy",
+    response_model=EmployeeResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update Staff Organization Hierarchy",
+)
+async def update_employee_hierarchy(
+    payload: EmployeeHierarchyUpdateRequest,
+    id: int = Path(..., ge=1),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> EmployeeResponse:
+    service = ProfileService(session)
+    emp = await service.update_employee_hierarchy(id, payload, current_user)
+    resp = EmployeeResponse.model_validate(emp)
+    return resp if is_privileged_for_pii(current_user) else mask_employee_pii(resp)
+
+
 @employees_router.delete(
     "/{id}",
     status_code=status.HTTP_200_OK,
@@ -228,6 +249,24 @@ async def update_agent(
     return resp if is_privileged_for_pii(current_user) else mask_agent_pii(resp)
 
 
+@agents_router.patch(
+    "/{id}/kyc",
+    response_model=AgentResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update Agent KYC Verification State",
+)
+async def update_agent_kyc(
+    payload: AgentKYCUpdateRequest,
+    id: int = Path(..., ge=1),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> AgentResponse:
+    service = ProfileService(session)
+    agent = await service.update_agent_kyc(id, payload, current_user)
+    resp = AgentResponse.model_validate(agent)
+    return resp if is_privileged_for_pii(current_user) else mask_agent_pii(resp)
+
+
 @agents_router.delete(
     "/{id}",
     status_code=status.HTTP_200_OK,
@@ -310,6 +349,21 @@ async def get_franchise(
     fran = await service.get_franchise(id, current_user)
     resp = FranchiseResponse.model_validate(fran)
     return resp if is_privileged_for_pii(current_user) else mask_franchise_pii(resp)
+
+
+@franchises_router.get(
+    "/{id}/hierarchy",
+    response_model=FranchiseHierarchyNode,
+    status_code=status.HTTP_200_OK,
+    summary="Get Franchise Partner Recursive Hierarchy",
+)
+async def get_franchise_hierarchy(
+    id: int = Path(..., ge=1),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> FranchiseHierarchyNode:
+    service = ProfileService(session)
+    return await service.get_franchise_hierarchy(id, current_user)
 
 
 @franchises_router.put(

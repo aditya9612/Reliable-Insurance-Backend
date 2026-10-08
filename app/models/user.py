@@ -69,3 +69,95 @@ class User(Base):
     def is_active(self) -> bool:
         """Determines if the user account is active (isdeleted != '1')."""
         return str(self.isdeleted).strip() != "1"
+
+
+class LoginHistory(Base):
+    """
+    User Login and Session Tracking History Model
+    Physical Table: tbl_loginhistory
+    Physical PK: LoginHistoryId
+    Verified Column Count: 8
+    Physical Foreign Keys: 0
+    """
+    __tablename__ = "tbl_loginhistory"
+    __table_args__ = (
+        Index("ix_tbl_loginhistory_UserId", "UserId"),
+        Index("ix_tbl_loginhistory_CreateDate", "CreateDate"),
+        {
+            "mysql_charset": "utf8",
+            "mysql_collate": "utf8_general_ci",
+            "mysql_row_format": "DYNAMIC",
+        },
+    )
+
+    LoginHistoryId: Mapped[int] = mapped_column("LoginHistoryId", Integer, primary_key=True, autoincrement=True)
+    UserId: Mapped[Optional[int]] = mapped_column("UserId", Integer, nullable=True)
+    UserName: Mapped[Optional[str]] = mapped_column("UserName", String(255), nullable=True)
+    LogInOrLogOut: Mapped[Optional[str]] = mapped_column("LogInOrLogOut", String(50), nullable=True)
+    funPerform: Mapped[Optional[str]] = mapped_column("funPerform", String(255), nullable=True)
+    IPAddress: Mapped[Optional[str]] = mapped_column("IPAddress", String(100), nullable=True)
+    CreateDate: Mapped[Optional[datetime]] = mapped_column("CreateDate", DateTime, nullable=True, default=datetime.utcnow)
+    Remark: Mapped[Optional[str]] = mapped_column("Remark", String(255), nullable=True)
+
+
+class RolePrivilege(Base):
+    """
+    Role Screen & Dynamic Menu Privilege Mapping Model
+    Physical Table: tbl_role_privilege
+    Physical PK: Id
+    Verified Column Count: 6
+    Physical Foreign Keys: 0
+    """
+    __tablename__ = "tbl_role_privilege"
+    __table_args__ = (
+        Index("ix_tbl_role_privilege_BranchId", "BranchId"),
+        Index("ix_tbl_role_privilege_RoleId", "RoleId"),
+        Index("ix_tbl_role_privilege_ScreenId", "ScreenId"),
+        {
+            "mysql_charset": "utf8",
+            "mysql_collate": "utf8_general_ci",
+            "mysql_row_format": "DYNAMIC",
+        },
+    )
+
+    Id: Mapped[int] = mapped_column("Id", Integer, primary_key=True, autoincrement=True)
+    BranchId: Mapped[Optional[int]] = mapped_column("BranchId", Integer, nullable=True)
+    RoleId: Mapped[Optional[int]] = mapped_column("RoleId", Integer, nullable=True)
+    ScreenId: Mapped[Optional[int]] = mapped_column("ScreenId", Integer, nullable=True)
+    CreateDate: Mapped[Optional[datetime]] = mapped_column("CreateDate", DateTime, nullable=True, default=datetime.utcnow)
+    isdeleted: Mapped[str] = mapped_column("isdeleted", String(10), nullable=False, default="0")
+
+    @property
+    def is_active(self) -> bool:
+        return str(self.isdeleted).strip() != "1"
+
+
+class MenuMaster(Base):
+    """
+    System Navigation & Presentation Menu Model
+    Physical Table: tbl_menu
+    Physical PK: MenuId
+    Verified Column Count: 7
+    Physical Foreign Keys: 0
+    """
+    __tablename__ = "tbl_menu"
+    __table_args__ = (
+        Index("ix_tbl_menu_ParentMenuId", "ParentMenuId"),
+        {
+            "mysql_charset": "utf8",
+            "mysql_collate": "utf8_general_ci",
+            "mysql_row_format": "DYNAMIC",
+        },
+    )
+
+    MenuId: Mapped[int] = mapped_column("MenuId", Integer, primary_key=True, autoincrement=True)
+    MenuName: Mapped[Optional[str]] = mapped_column("MenuName", String(100), nullable=True)
+    MenuUrl: Mapped[Optional[str]] = mapped_column("MenuUrl", String(255), nullable=True)
+    ParentMenuId: Mapped[int] = mapped_column("ParentMenuId", Integer, nullable=False, default=0)
+    OrderNo: Mapped[int] = mapped_column("OrderNo", Integer, nullable=False, default=0)
+    IconClass: Mapped[Optional[str]] = mapped_column("IconClass", String(50), nullable=True)
+    isdeleted: Mapped[str] = mapped_column("isdeleted", String(10), nullable=False, default="0")
+
+    @property
+    def is_active(self) -> bool:
+        return str(self.isdeleted).strip() != "1"

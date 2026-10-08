@@ -14,6 +14,9 @@ from app.models.master import (
     StateMaster,
     DistrictMaster,
     BankMaster,
+    FuelType,
+    Financier,
+    Surveyor,
 )
 from app.repositories.master import (
     VehicleTypeRepository,
@@ -31,6 +34,9 @@ from app.repositories.master import (
     StateRepository,
     DistrictRepository,
     BankRepository,
+    FuelTypeRepository,
+    FinancierRepository,
+    SurveyorRepository,
 )
 
 
@@ -54,6 +60,9 @@ class MasterService:
         self.state_repo = StateRepository(session)
         self.district_repo = DistrictRepository(session)
         self.bank_repo = BankRepository(session)
+        self.fuel_type_repo = FuelTypeRepository(session)
+        self.financier_repo = FinancierRepository(session)
+        self.surveyor_repo = SurveyorRepository(session)
 
     # -----------------------------------------------------------------------
     # BLOCK 1: Vehicle, RTO, and Insurer Masters
@@ -277,3 +286,66 @@ class MasterService:
 
     async def get_bank(self, bank_id: int) -> Optional[BankMaster]:
         return await self.bank_repo.get_by_id(bank_id)
+
+    # -----------------------------------------------------------------------
+    # BLOCK 4: Fuel Types, Financiers, and Surveyors
+    # -----------------------------------------------------------------------
+
+    async def list_fuel_types(self, offset: int = 0, limit: int = 100) -> Sequence[FuelType]:
+        return await self.fuel_type_repo.list_active(offset=offset, limit=limit)
+
+    async def create_fuel_type(self, fuel_type: str) -> FuelType:
+        item = await self.fuel_type_repo.create_fuel_type(fuel_type)
+        await self.session.commit()
+        await self.session.refresh(item)
+        return item
+
+    async def list_financiers(
+        self,
+        branch_id: Optional[int] = None,
+        search: Optional[str] = None,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> Sequence[Financier]:
+        return await self.financier_repo.list_active(
+            branch_id=branch_id, search=search, offset=offset, limit=limit
+        )
+
+    async def create_financier(
+        self,
+        name: str,
+        branch_id: Optional[int] = None,
+        contact_no: Optional[str] = None,
+        email_id: Optional[str] = None,
+        address: Optional[str] = None,
+    ) -> Financier:
+        item = await self.financier_repo.create_financier(
+            name=name,
+            branch_id=branch_id,
+            contact_no=contact_no,
+            email_id=email_id,
+            address=address,
+        )
+        await self.session.commit()
+        await self.session.refresh(item)
+        return item
+
+    async def list_surveyors(
+        self,
+        branch_id: Optional[int] = None,
+        search: Optional[str] = None,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> Sequence[Surveyor]:
+        return await self.surveyor_repo.list_active(
+            branch_id=branch_id, search=search, offset=offset, limit=limit
+        )
+
+    async def create_surveyor(
+        self,
+        surveyor: Surveyor,
+    ) -> Surveyor:
+        self.session.add(surveyor)
+        await self.session.commit()
+        await self.session.refresh(surveyor)
+        return surveyor

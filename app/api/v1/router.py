@@ -18,6 +18,8 @@ from app.api.v1.endpoints import (
     reports,
     profiles,
     utilities,
+    users,
+    admin,
 )
 
 api_router = APIRouter()
@@ -175,9 +177,16 @@ api_router.include_router(
     tags=["batch-tasks"],
 )
 
+# Mount Phase 16B User Management & Account Lifecycle endpoints
+api_router.include_router(
+    users.router,
+    prefix="/users",
+    tags=["users"],
+)
 
-
-
-
-
-
+# Mount Phase 16B Admin Overview Counters & Dynamic Privileges endpoints
+api_router.include_router(
+    admin.router,
+    prefix="/admin",
+    tags=["admin"],
+)

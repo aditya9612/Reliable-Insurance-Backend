@@ -15,7 +15,7 @@ from app.models.commission import (
     AgentCommissionPayment,
     CutNPayCommPayable,
 )
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, LoginHistory, RolePrivilege, MenuMaster
 from app.models.master import (
     VehicleType,
     VehicleSubType,
@@ -28,6 +28,9 @@ from app.models.master import (
     StateMaster,
     DistrictMaster,
     BankMaster,
+    FuelType,
+    Financier,
+    Surveyor,
 )
 from app.models.quotation import (
     AppQuatationEntry,
@@ -101,6 +104,9 @@ __all__ = [
     "CutNPayCommPayable",
     "User",
     "UserRole",
+    "LoginHistory",
+    "RolePrivilege",
+    "MenuMaster",
     "VehicleType",
     "VehicleSubType",
     "VehicleMake",
@@ -112,6 +118,9 @@ __all__ = [
     "StateMaster",
     "DistrictMaster",
     "BankMaster",
+    "FuelType",
+    "Financier",
+    "Surveyor",
     "AppQuatationEntry",
     "AppQuotationRequest",
     "InsuranceCompanyQuotation",

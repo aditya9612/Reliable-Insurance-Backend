@@ -24,7 +24,14 @@ from app.schemas.master import (
     StateResponse,
     DistrictResponse,
     BankResponse,
+    FuelTypeResponse,
+    FuelTypeCreate,
+    FinancierResponse,
+    FinancierCreate,
+    SurveyorResponse,
+    SurveyorCreate,
 )
+from app.models.master import Surveyor
 
 router = APIRouter()
 
@@ -543,3 +550,132 @@ async def get_bank(
     if not b:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bank not found")
     return BankResponse.model_validate(b)
+
+
+# ---------------------------------------------------------------------------
+# BLOCK 4: Fuel Types, Financiers, and Surveyors
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/fuel-types",
+    response_model=List[FuelTypeResponse],
+    summary="List active vehicle fuel types",
+)
+async def list_fuel_types(
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=200),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> List[FuelTypeResponse]:
+    service = MasterService(session)
+    items = await service.list_fuel_types(offset=offset, limit=limit)
+    return [FuelTypeResponse.model_validate(f) for f in items]
+
+
+@router.post(
+    "/fuel-types",
+    response_model=FuelTypeResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create vehicle fuel type",
+)
+async def create_fuel_type(
+    payload: FuelTypeCreate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> FuelTypeResponse:
+    service = MasterService(session)
+    item = await service.create_fuel_type(payload.FuelType)
+    return FuelTypeResponse.model_validate(item)
+
+
+@router.get(
+    "/financiers",
+    response_model=List[FinancierResponse],
+    summary="List active financiers",
+)
+async def list_financiers(
+    branch_id: Optional[int] = Query(None, description="Optional Branch ID filter"),
+    search: Optional[str] = Query(None, description="Search by financier name"),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=200),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> List[FinancierResponse]:
+    service = MasterService(session)
+    items = await service.list_financiers(
+        branch_id=branch_id, search=search, offset=offset, limit=limit
+    )
+    return [FinancierResponse.model_validate(f) for f in items]
+
+
+@router.post(
+    "/financiers",
+    response_model=FinancierResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create financier entry",
+)
+async def create_financier(
+    payload: FinancierCreate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> FinancierResponse:
+    service = MasterService(session)
+    item = await service.create_financier(
+        name=payload.FinancierName,
+        branch_id=payload.BranchId or current_user.BranchId,
+        contact_no=payload.ContactNo,
+        email_id=payload.EmailId,
+        address=payload.Address,
+    )
+    return FinancierResponse.model_validate(item)
+
+
+@router.get(
+    "/surveyors",
+    response_model=List[SurveyorResponse],
+    summary="List active claim surveyors",
+)
+async def list_surveyors(
+    branch_id: Optional[int] = Query(None, description="Optional Branch ID filter"),
+    search: Optional[str] = Query(None, description="Search by surveyor name or license no"),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=200),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> List[SurveyorResponse]:
+    service = MasterService(session)
+    items = await service.list_surveyors(
+        branch_id=branch_id, search=search, offset=offset, limit=limit
+    )
+    return [SurveyorResponse.model_validate(s) for s in items]
+
+
+@router.post(
+    "/surveyors",
+    response_model=SurveyorResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create claim surveyor entry",
+)
+async def create_surveyor(
+    payload: SurveyorCreate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> SurveyorResponse:
+    service = MasterService(session)
+    surveyor = Surveyor(
+        SurveyorName=payload.SurveyorName,
+        ContactNo=payload.ContactNo,
+        EmailId=payload.EmailId,
+        LicenseNo=payload.LicenseNo,
+        LicenseExpiryDate=payload.LicenseExpiryDate,
+        Address=payload.Address,
+        City=payload.City,
+        StateId=payload.StateId,
+        BranchId=payload.BranchId or current_user.BranchId,
+        BankId=payload.BankId,
+        AccountNo=payload.AccountNo,
+        IFSC_Code=payload.IFSC_Code,
+        isdeleted="0",
+    )
+    item = await service.create_surveyor(surveyor)
+    return SurveyorResponse.model_validate(item)

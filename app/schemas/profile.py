@@ -70,6 +70,9 @@ class EmployeeBase(BaseModel):
     BranchId: Optional[int] = None
     UserRoleId: Optional[int] = None
     UserId: Optional[int] = None
+    Hei_Data: Optional[str] = None
+    Hie_DataSales: Optional[str] = None
+    Hie_DataOprn: Optional[str] = None
 
 
 class EmployeeCreate(EmployeeBase):
@@ -117,6 +120,12 @@ class EmployeeResponse(EmployeeBase):
     UpdateUser: Optional[str] = None
 
 
+class EmployeeHierarchyUpdateRequest(BaseModel):
+    Hei_Data: Optional[str] = None
+    Hie_DataSales: Optional[str] = None
+    Hie_DataOprn: Optional[str] = None
+
+
 # ============================================================================
 # AGENT SCHEMAS
 # ============================================================================
@@ -142,6 +151,8 @@ class AgentBase(BaseModel):
     Ifsc_code: Optional[str] = None
     accountNo: Optional[str] = None
     IsActive: int = 1
+    kyc_status: Optional[str] = "PENDING"
+    kyc_remarks: Optional[str] = None
 
 
 class AgentCreate(AgentBase):
@@ -175,6 +186,11 @@ class AgentKYCUpload(BaseModel):
     document_type: str = Field(..., description="PAN, AADHAR, CANCELLED_CHEQUE, CERTIFICATE")
     document_number: Optional[str] = None
     remarks: Optional[str] = None
+
+
+class AgentKYCUpdateRequest(BaseModel):
+    kyc_status: str = Field(..., description="Target KYC status: VERIFIED or REJECTED")
+    kyc_remarks: Optional[str] = None
 
 
 class AgentResponse(AgentBase):
@@ -280,6 +296,20 @@ class FranchiseResponse(FranchiseBase):
     CreateUser: Optional[str] = None
     UpdateDate: Optional[datetime] = None
     UpdateUser: Optional[str] = None
+
+
+class FranchiseHierarchyNode(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    FranchiseId: int
+    FranCode: Optional[str] = None
+    FranFName: Optional[str] = None
+    FranMName: Optional[str] = None
+    FranLName: Optional[str] = None
+    ParentFranchiseId: Optional[int] = None
+    BranchId: Optional[int] = None
+    depth: int = 0
+    children: List["FranchiseHierarchyNode"] = []
 
 
 # ============================================================================

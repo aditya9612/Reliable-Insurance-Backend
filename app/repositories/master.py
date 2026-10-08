@@ -15,6 +15,9 @@ from app.models.master import (
     StateMaster,
     DistrictMaster,
     BankMaster,
+    FuelType,
+    Financier,
+    Surveyor,
 )
 from app.models.quotation import (
     AddonExtraAmt,
@@ -546,3 +549,112 @@ class BankRepository(BaseRepository[BankMaster]):
         query = select(BankMaster).where(and_(*conditions)).order_by(BankMaster.BankName).offset(offset).limit(limit)
         result = await self.session.execute(query)
         return result.scalars().all()
+
+
+class FuelTypeRepository(BaseRepository[FuelType]):
+    """Data access repository for tbl_fueltype."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        super().__init__(FuelType, session)
+
+    async def list_active(self, offset: int = 0, limit: int = 100) -> Sequence[FuelType]:
+        query = select(FuelType).where(
+            (FuelType.isdeleted == None) | (FuelType.isdeleted != "1")  # noqa: E711
+        ).order_by(FuelType.FuelTypeId).offset(offset).limit(limit)
+        result = await self.session.execute(query)
+        return result.scalars().all()
+
+    async def get_by_name(self, fuel_type: str) -> Optional[FuelType]:
+        query = select(FuelType).where(
+            FuelType.FuelType.ilike(fuel_type),
+            (FuelType.isdeleted == None) | (FuelType.isdeleted != "1"),  # noqa: E711
+        )
+        result = await self.session.execute(query)
+        return result.scalars().first()
+
+    async def create_fuel_type(self, fuel_type: str) -> FuelType:
+        item = FuelType(FuelType=fuel_type, isdeleted="0")
+        self.session.add(item)
+        await self.session.flush()
+        return item
+
+
+class FinancierRepository(BaseRepository[Financier]):
+    """Data access repository for tbl_financier."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        super().__init__(Financier, session)
+
+    async def list_active(
+        self,
+        branch_id: Optional[int] = None,
+        search: Optional[str] = None,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> Sequence[Financier]:
+        query = select(Financier).where(
+            (Financier.isdeleted == None) | (Financier.isdeleted != "1")  # noqa: E711
+        )
+        if branch_id is not None:
+            query = query.where(Financier.BranchId == branch_id)
+        if search:
+            query = query.where(Financier.FinancierName.ilike(f"%{search}%"))
+
+        query = query.order_by(Financier.FinancierId).offset(offset).limit(limit)
+        result = await self.session.execute(query)
+        return result.scalars().all()
+
+    async def create_financier(
+        self,
+        name: str,
+        branch_id: Optional[int] = None,
+        contact_no: Optional[str] = None,
+        email_id: Optional[str] = None,
+        address: Optional[str] = None,
+    ) -> Financier:
+        item = Financier(
+            FinancierName=name,
+            BranchId=branch_id,
+            ContactNo=contact_no,
+            EmailId=email_id,
+            Address=address,
+            isdeleted="0",
+        )
+        self.session.add(item)
+        await self.session.flush()
+        return item
+
+
+class SurveyorRepository(BaseRepository[Surveyor]):
+    """Data access repository for tbl_surveyor."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        super().__init__(Surveyor, session)
+
+    async def list_active(
+        self,
+        branch_id: Optional[int] = None,
+        search: Optional[str] = None,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> Sequence[Surveyor]:
+        query = select(Surveyor).where(
+            (Surveyor.isdeleted == None) | (Surveyor.isdeleted != "1")  # noqa: E711
+        )
+        if branch_id is not None:
+            query = query.where(Surveyor.BranchId == branch_id)
+        if search:
+            s = f"%{search}%"
+            query = query.where(Surveyor.SurveyorName.ilike(s) | Surveyor.LicenseNo.ilike(s))
+
+        query = query.order_by(Surveyor.SurveyorId).offset(offset).limit(limit)
+        result = await self.session.execute(query)
+        return result.scalars().all()
+
+    async def get_by_license(self, license_no: str) -> Optional[Surveyor]:
+        query = select(Surveyor).where(
+            Surveyor.LicenseNo == license_no,
+            (Surveyor.isdeleted == None) | (Surveyor.isdeleted != "1"),  # noqa: E711
+        )
+        result = await self.session.execute(query)
+        return result.scalars().first()

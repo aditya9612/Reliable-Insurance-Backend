@@ -55,3 +55,55 @@ class UserRepository(BaseRepository[User]):
         user.UpdateDate = datetime.utcnow()
         await self.session.flush()
         return user
+
+    async def list_users(
+        self,
+        search: Optional[str] = None,
+        branch_id: Optional[int] = None,
+        role_id: Optional[int] = None,
+        is_active: Optional[bool] = None,
+        offset: int = 0,
+        limit: int = 50,
+    ) -> Sequence[User]:
+        """List users with pagination and search/filters."""
+        query = select(User)
+        if search:
+            s = f"%{search}%"
+            query = query.where((User.UserName.ilike(s)) | (User.mobile_no.ilike(s)))
+        if branch_id is not None:
+            query = query.where(User.BranchId == branch_id)
+        if role_id is not None:
+            query = query.where(User.UserRoleId == role_id)
+        if is_active is True:
+            query = query.where((User.isdeleted == None) | (User.isdeleted != "1"))  # noqa: E711
+        elif is_active is False:
+            query = query.where(User.isdeleted == "1")
+
+        query = query.order_by(User.UserId.desc()).offset(offset).limit(limit)
+        result = await self.session.execute(query)
+        return result.scalars().all()
+
+    async def count_users(
+        self,
+        search: Optional[str] = None,
+        branch_id: Optional[int] = None,
+        role_id: Optional[int] = None,
+        is_active: Optional[bool] = None,
+    ) -> int:
+        """Count users matching search/filters."""
+        from sqlalchemy import func
+        query = select(func.count(User.UserId))
+        if search:
+            s = f"%{search}%"
+            query = query.where((User.UserName.ilike(s)) | (User.mobile_no.ilike(s)))
+        if branch_id is not None:
+            query = query.where(User.BranchId == branch_id)
+        if role_id is not None:
+            query = query.where(User.UserRoleId == role_id)
+        if is_active is True:
+            query = query.where((User.isdeleted == None) | (User.isdeleted != "1"))  # noqa: E711
+        elif is_active is False:
+            query = query.where(User.isdeleted == "1")
+
+        result = await self.session.execute(query)
+        return result.scalar() or 0

@@ -6,6 +6,7 @@ from app.core.security import verify_password, get_password_hash, create_access_
 from app.models.user import User, UserRole
 from app.repositories.user import UserRepository
 from app.repositories.role import RoleRepository
+from app.repositories.login_history import LoginHistoryRepository
 from app.schemas.auth import LoginResponse, UserRead
 
 
@@ -23,6 +24,7 @@ class AuthService:
         self.session = session
         self.user_repo = UserRepository(session)
         self.role_repo = RoleRepository(session)
+        self.history_repo = LoginHistoryRepository(session)
 
     async def authenticate(
         self, username: str, password: str
@@ -70,7 +72,9 @@ class AuthService:
 
         return user, role, None
 
-    async def login(self, username: str, password: str) -> Tuple[Optional[LoginResponse], Optional[str]]:
+    async def login(
+        self, username: str, password: str, ip_address: Optional[str] = None
+    ) -> Tuple[Optional[LoginResponse], Optional[str]]:
         """
         High-level authentication flow generating JWT access token upon success.
         
@@ -80,7 +84,35 @@ class AuthService:
         """
         user, role, error = await self.authenticate(username, password)
         if error or not user:
+            try:
+                found_user = await self.user_repo.get_by_username(username)
+                uid = found_user.UserId if found_user else None
+                await self.history_repo.create_log(
+                    user_id=uid,
+                    username=username,
+                    action="FAILED_LOGIN",
+                    fun_perform="Login Failed",
+                    ip_address=ip_address,
+                    remark=f"Failed reason: {error}",
+                )
+                await self.session.commit()
+            except Exception:
+                pass
             return None, error
+
+        # Record successful login history
+        try:
+            await self.history_repo.create_log(
+                user_id=user.UserId,
+                username=user.UserName,
+                action="LOGIN",
+                fun_perform="User Logged In",
+                ip_address=ip_address,
+                remark="Success",
+            )
+            await self.session.commit()
+        except Exception:
+            pass
 
         principal = await resolve_principal_context(self.session, user, role)
 
