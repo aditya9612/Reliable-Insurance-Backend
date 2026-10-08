@@ -23,6 +23,9 @@ from app.repositories.master import (
     InsuranceCompanyRepository,
 )
 
+from app.repositories.profile_repository import ProfileRepository
+from app.repositories.utility_repository import UtilityRepository
+
 __all__ = [
     "BaseRepository",
     "CustomerRepository",
@@ -44,5 +47,6 @@ __all__ = [
     "VehicleVariantRepository",
     "RTORepository",
     "InsuranceCompanyRepository",
+    "ProfileRepository",
+    "UtilityRepository",
 ]
-

@@ -16,6 +16,8 @@ from app.api.v1.endpoints import (
     renewals,
     dashboards,
     reports,
+    profiles,
+    utilities,
 )
 
 api_router = APIRouter()
@@ -132,6 +134,45 @@ api_router.include_router(
     reports.router,
     prefix="/reports",
     tags=["reports"],
+)
+
+# Mount Phase 15B Staff Directory, POSP Agents & Franchise Profiles endpoints
+api_router.include_router(
+    profiles.employees_router,
+    prefix="/employees",
+    tags=["employees"],
+)
+api_router.include_router(
+    profiles.agents_router,
+    prefix="/agents",
+    tags=["agents"],
+)
+api_router.include_router(
+    profiles.franchises_router,
+    prefix="/franchises",
+    tags=["franchises"],
+)
+
+# Mount Phase 15B Special IDV Overrides, Health Grid, Bulk Imports & Batch Tasks endpoints
+api_router.include_router(
+    utilities.idv_router,
+    prefix="/idv-requests",
+    tags=["idv-requests"],
+)
+api_router.include_router(
+    utilities.health_members_router,
+    prefix="/health-members",
+    tags=["health-members"],
+)
+api_router.include_router(
+    utilities.imports_router,
+    prefix="/imports",
+    tags=["imports"],
+)
+api_router.include_router(
+    utilities.batch_tasks_router,
+    prefix="/batch-tasks",
+    tags=["batch-tasks"],
 )
 
 

@@ -76,6 +76,16 @@ from app.models.report import (
     PospInvoice,
     Target,
 )
+from app.models.profile import (
+    Employee,
+    Agent,
+    Franchise,
+)
+from app.models.utility import (
+    IDVRequest,
+    HealthMember,
+    ImportAgentPolicy,
+)
 
 __all__ = [
     "Base",
@@ -140,4 +150,10 @@ __all__ = [
     "OTPLog",
     "PospInvoice",
     "Target",
+    "Employee",
+    "Agent",
+    "Franchise",
+    "IDVRequest",
+    "HealthMember",
+    "ImportAgentPolicy",
 ]

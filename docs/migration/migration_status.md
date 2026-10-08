@@ -1,7 +1,7 @@
 # Migration Status & Phase Tracking
 ## Reliable Assurance Backend Migration (C# .NET 4.0 → FastAPI)
 
-### Overall Status: PHASE 14 COMPLETED — VERIFIED PARITY & IMPLEMENTATION (382/382 REGRESSION TESTS PASSING, ALEMBIC HEAD e14a0b2c1401)
+### Overall Status: PHASE 15B IMPLEMENTATION & VERIFICATION COMPLETE (396/396 REGRESSION TESTS PASSING, ALEMBIC HEAD f15b0c3d1501, 68 PHYSICAL TABLES, UNSTAGED FOR PRE-COMMIT AUDIT)
 
 ---
 
@@ -32,10 +32,11 @@
 | **Phase 12**| Master Data, Underwriting Lookups, Organizational References & Search/Autocomplete | **COMPLETED — VERIFIED PARITY (`f547fbf`)** | 7 Vehicle Master APIs (`VehicleType`, `VehicleSubType`, `VehicleMake`, `VehicleModel`, `VehicleVariant` [91 columns + 19 regional city prices], `RTOMaster`, `InsuranceCompany`); Underwriting Lookups (`AddonExtraAmt`, `PAToOwnerDriver`, `InsuranceCompanyWiseTowingChanges`, `NCBSlabs`); Organizational Masters (`Branch`, `StateMaster`, `DistrictMaster`, `BankMaster`); Alembic migration `c12d0e6f1201` applied (52 total tables); Complete search engine mapping 57 legacy AJAX WebMethods (41 `SearchMethods.aspx.cs` + 16 `AppSearchMethod.aspx.cs`), duplicate registration/engine/chassis checks, operational counters, dashboard summary; 17 automated tests; 326/326 regression passing (100%). |
 | **Phase 13**| External Integrations, Notifications & Renewal CRM | **COMPLETED — VERIFIED PARITY** | Vehicle RC 3-tier cascade (`INTERNAL_SYSTEM` -> `LOCAL_CACHE` -> `EXTERNAL_PROVIDER`) with 54-attribute `tbl_vehiclenorc_details`; Mobile OTP with salted SHA-256 hash closing `GAP-P5-002` / `LBR-002`, 5-min TTL, 30s cooldown; Outbound SMS (`Fast2SMS`, `IndiaText`) & `tbl_sms_log`; Push Notifications (OneSignal) with dual-dispatch into `tbl_messagemaster` & `tbl_messagedetails`; SMTP dynamic Excel renewal reports; Renewal CRM & performance engine (`tbl_preyearrenewalstatus`, `tbl_renewal_followup_history`, 4-state lifecycle, Indian FY boundaries, multitenant scoping); Background tasks (`daily_renewal_expiry_check`, `daily_payment_report`); Alembic migration `d13e0f7a1301` applied (60 total tables); 34 automated tests; 360/360 regression passing (100%). |
 | **Phase 14**| Reporting, Dashboards, MIS & POSP Invoices | **COMPLETED — VERIFIED PARITY** | Stage A forensic legacy audit + Stage B full implementation & verification: 2 new tables (`tbl_posp_invoice`, `tbl_target`), Alembic migration `e14a0b2c1401` applied (62 total tables); `ReportRepository`, `ReportService`, `ExportService` (Indian numbering system `convert_number_to_words_inr`, OpenXML `.xlsx` with `#48D1CC` headers and alternating rows, bounded-memory CSV generator, ReportLab A4 invoice & voucher PDFs); 5 Dashboard APIs, MIS transaction report with 12 sensitive column masks, strictly gated exports (CSV/XLSX), POSP payout invoice generator with GST 18% / TDS 5% parity and duplicate prevention, Statutory TDS Register (Section 194H) with 2113 ledger tracking, 4-tier ledger drilldown and statements, operations reconciliations (brokerage and bank uncleared), operational endorsements and claims, telecaller/executive targets and renewal expiry reports; 22 automated tests (11 unit + 11 integration/E2E); 382/382 regression passing (100%); zero connections/queries to production. |
-| **Phase 15**| Compatibility Adapters | *PENDING* | ASMX request/response adapters for mobile app clients. |
-| **Phase 16**| Full Parity Testing | *PENDING* | End-to-end golden dataset comparisons between legacy and FastAPI. |
-| **Phase 17**| Dual-Run Verification | *PENDING* | Live side-by-side traffic validation against shared database. |
-| **Phase 18**| Production Cutover | *PENDING* | Cutover mobile and API traffic to FastAPI. |
+| **Phase 15**| Master Remaining Coverage, Deferred Modules & Gap Audit | **COMPLETED (STAGE A AUDIT)** | Comprehensive forensic audit across 419 entry points, 943 SPs, 62 tables, 140 rules, Celery batch jobs, bulk imports, and external integrations; cataloged 0 P0/P1 gaps, 9 P2 operational items, 15 preserved UNKNOWNs; defined Candidate A (Batch/Imports) as next phase; 382/382 tests passing (100%). |
+| **Phase 15B**| Operational Batch Jobs, Bulk Imports, Staging Utilities & Profiles | **COMPLETED — VERIFIED PARITY** | Celery & REST on-demand cheque locks (`LBR-069`), birthday greetings, bulk Excel/CSV policy MIS upload (`tbl_importagentpolicy`), health family grid (`tbl_healthmember`), IDV override queue (`tbl_idvrequest`), Employee (`tbl_employee`), Agent (`tbl_agent`), and Franchise (`tbl_franchise`) profiles; Alembic migration `f15b0c3d1501` applied (68 total tables); 14 new tests added; 396/396 regression tests passing (100%); zero connections/queries to production. |
+| **Phase 16**| Administrative Profiles, Directories & Dynamic Privileges | *PENDING* | Detailed Employee, Agent, Franchise profile directories, login history, and role-privilege menu matrix. |
+| **Phase 17**| Legacy Mobile Compatibility Shim | *PENDING* | ASMX request/response adapters for legacy mobile clients. |
+| **Phase 18**| Dual-Run Verification & Production Cutover | *PENDING* | End-to-end golden verification and final cutover. |
 
 ---
 
@@ -145,3 +146,16 @@ Safety Guard: Enforced validator in app.core.config rejects any production IP or
 - `docs/migration/phase_12_master_data_coverage_matrix.md`: Phase 12 coverage matrix for 7 vehicle masters (91-col + 19 regional pricing), underwriting lookups, and organizational references.
 - `docs/migration/phase_12_api_contract.md`: Phase 12 OpenAPI REST API contract for `/api/v1/masters` and `/api/v1/search`.
 - `docs/migration/phase_12_final_report.md`: Phase 12 forensic parity audit, implementation summary, and verification report (326/326 tests green).
+- `docs/migration/phase_13_final_report.md`: Phase 13 external integrations, OTP, outbound notifications, and renewal CRM report (360/360 tests green).
+- `docs/migration/phase_14_implementation_report.md`: Phase 14B reporting, dashboards, MIS, POSP invoices, accounting, statutory, and document exports report (382/382 tests green).
+- `docs/migration/phase_15_stage_a_final_report.md`: Phase 15 Stage A remaining legacy coverage and gap audit report.
+- `docs/migration/phase_15b_implementation_summary.md`: Phase 15B operational batch jobs, bulk imports, staging utilities & partner profiles implementation summary.
+- `docs/migration/phase_15b_database_models.md`: Phase 15B physical database models schema documentation (68 total tables).
+- `docs/migration/phase_15b_api_parity_matrix.md`: Phase 15B API parity & 23-endpoint matrix.
+- `docs/migration/phase_15b_batch_jobs_architecture.md`: Phase 15B operational background batch jobs and automation architecture.
+- `docs/migration/phase_15b_bulk_import_pipeline.md`: Phase 15B Excel/CSV policy MIS parsing and staging pipeline.
+- `docs/migration/phase_15b_business_rule_validation.md`: Phase 15B legacy business rule compliance (LBR-058, LBR-069, etc.).
+- `docs/migration/phase_15b_rbac_security_audit.md`: Phase 15B RBAC, branch scoping, and principal isolation audit.
+- `docs/migration/phase_15b_test_verification_report.md`: Phase 15B test & verification audit report (396/396 tests green).
+- `docs/migration/phase_15b_unknowns.md`: Phase 15B consolidated unknowns register (15 preserved project unknowns).
+- `docs/migration/phase_15b_final_report.md`: Phase 15B master implementation and verification final report.
