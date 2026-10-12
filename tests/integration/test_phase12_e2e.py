@@ -47,6 +47,9 @@ async def cleanup_phase12_e2e_tables(db_session: AsyncSession):
         "tbl_bank",
         "tbl_district",
         "tbl_state",
+        "tbl_vehicle_variants",
+        "tbl_vehicle_model",
+        "tbl_vehicle_make",
     ):
         await db_session.execute(text(f"DELETE FROM {tbl};"))
     await db_session.commit()
@@ -62,6 +65,9 @@ async def cleanup_phase12_e2e_tables(db_session: AsyncSession):
             "tbl_bank",
             "tbl_district",
             "tbl_state",
+            "tbl_vehicle_variants",
+            "tbl_vehicle_model",
+            "tbl_vehicle_make",
         ):
             await db_session.execute(text(f"DELETE FROM {tbl};"))
         await db_session.commit()

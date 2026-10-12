@@ -21,6 +21,10 @@ from app.api.v1.endpoints import (
     users,
     admin,
     phase18a,
+    phase20,
+    phase21_nonmotor,
+    phase22,
+    phase23,
 )
 
 api_router = APIRouter()
@@ -187,6 +191,7 @@ api_router.include_router(
     prefix="/agents",
     tags=["agents"],
 )
+api_router.include_router(phase20.reward_points_router)
 api_router.include_router(
     profiles.agents_router,
     prefix="/agents",
@@ -248,3 +253,32 @@ api_router.include_router(
     prefix="/admin",
     tags=["admin"],
 )
+
+# Mount Phase 20 Circulars, Customer Helpdesk, Web Notifications, Clusters & Decline Rules endpoints
+api_router.include_router(phase20.circulars_router)
+api_router.include_router(phase20.customer_help_router)
+api_router.include_router(phase20.web_notifications_router)
+api_router.include_router(phase20.clusters_router)
+api_router.include_router(phase20.decline_rules_router)
+
+# Mount Phase 21 Non-Motor Commercial Insurance Lines of Business endpoints
+api_router.include_router(phase21_nonmotor.nonmotor_products_router)
+api_router.include_router(phase21_nonmotor.nonmotor_endorsements_router)
+api_router.include_router(phase21_nonmotor.nonmotor_commissions_router)
+api_router.include_router(phase21_nonmotor.nonmotor_transactions_router)
+
+# Mount Phase 22 Sales Executive & Location Head Commissions, Insurer Portals, and App Billing endpoints
+api_router.include_router(phase22.sales_exec_commissions_router)
+api_router.include_router(phase22.location_head_commissions_router)
+api_router.include_router(phase22.insurer_portals_router)
+api_router.include_router(phase22.app_billing_router)
+
+# Mount Phase 23 Complete HR & Workforce Management System endpoints
+api_router.include_router(phase23.hr_organizations_router)
+api_router.include_router(phase23.hr_departments_router)
+api_router.include_router(phase23.hr_designations_router)
+api_router.include_router(phase23.hr_facilities_router)
+api_router.include_router(phase23.hr_holidays_router)
+api_router.include_router(phase23.hr_leave_types_router)
+api_router.include_router(phase23.hr_leaves_router)
+api_router.include_router(phase23.hr_contacts_router)
