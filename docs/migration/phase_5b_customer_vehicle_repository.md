@@ -37,7 +37,7 @@ Key achievements:
 ## 2. Environment & Database Isolation Audit
 
 In strict compliance with architectural safety requirements:
-- **Zero remote connections**: No network connections or queries were made to legacy production (`103.149.199.250:3309` / `brahmainsurance`).
+- **Zero remote connections**: No network connections or queries were made to legacy production (`[LEGACY_DB_HOST_REDACTED]:3309` / `brahmainsurance`).
 - **Target database**: All migrations, schema changes, and integration tests ran exclusively against local MySQL `localhost:3306/reliable_insurance_dev`.
 - **Isolation check**: Automated integration test `test_customer_vehicle_db_isolation_safety` asserts that `DATABASE()` is `reliable_insurance_dev` and verifies the absence of production hostnames or credentials.
 

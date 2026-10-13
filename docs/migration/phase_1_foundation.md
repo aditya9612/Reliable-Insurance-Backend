@@ -47,7 +47,7 @@ The critical findings from Phase 0 have been recorded and preserved as non-negot
 ### 3.2 Configuration (`app/core/config.py`)
 - Built with Pydantic `BaseSettings` (`SettingsConfigDict(env_file=".env")`).
 - Reads `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET_KEY`, `APP_ENV`, `CORS_ORIGINS`.
-- **Enforced Safety Check**: Active `@field_validator("DATABASE_URL")` rejects any URL containing `brahmainsurance`, `103.149.199.250`, `103.7.181.105`, or `103.104.73.198`.
+- **Enforced Safety Check**: Active `@field_validator("DATABASE_URL")` rejects any URL containing `brahmainsurance`, `[LEGACY_DB_HOST_REDACTED]`, `103.7.181.105`, or `103.104.73.198`.
 
 ### 3.3 Async Database Layer (`app/db/session.py`, `app/db/base.py`)
 - Async SQLAlchemy 2.x engine using `aiomysql`.

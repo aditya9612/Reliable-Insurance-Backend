@@ -21,7 +21,7 @@ Phase 4B successfully translates the verified legacy production master database 
 - **Additive Alembic Migration**: Applied revision `cfb1bd63a8ff` cleanly to `reliable_insurance_dev`. Total table count in local development DB increased from 13 to 20 without altering existing Phase 2 or Phase 3 schemas.
 - **Async Master Repositories**: Implemented 7 async data-access repositories providing lookup, hierarchy resolution, and active-record filtering.
 - **100% Test Pass Rate**: 16 new automated tests added (8 unit + 8 integration), bringing the total suite to **68 tests passing (0 failures)**.
-- **Absolute Environment Isolation**: Legacy production database (`brahmainsurance` on `103.149.199.250:3309`) was **never accessed** during Phase 4B.
+- **Absolute Environment Isolation**: Legacy production database (`brahmainsurance` on `[LEGACY_DB_HOST_REDACTED]:3309`) was **never accessed** during Phase 4B.
 
 ---
 
@@ -181,7 +181,7 @@ tests\unit\test_security.py ......                                       [100%]
 
 | Safety Rule | Status | Evidence |
 |---|---|---|
-| No production DB connection during Phase 4B | **VERIFIED** | Phase 4B performed 100% locally; remote IP `103.149.199.250` was not contacted. |
+| No production DB connection during Phase 4B | **VERIFIED** | Phase 4B performed 100% locally; remote IP `[LEGACY_DB_HOST_REDACTED]` was not contacted. |
 | No production credentials in `.env` / Git | **VERIFIED** | Local `.env` references `localhost:3306/reliable_insurance_dev`. |
 | No production DDL / migrations executed | **VERIFIED** | Alembic ran exclusively against local MySQL `reliable_insurance_dev`. |
 | No data mutations on legacy systems | **VERIFIED** | 0 writes/modifications to legacy systems. |

@@ -7,6 +7,17 @@ venv/
 env/
 
 .env
+.env.*
+!.env.example
+
+# Security & Credentials
+*.pem
+*.key
+*.pfx
+*.crt
+
+# Legacy reference source tree (local, untracked, read-only)
+InsurancefinalNew_2026_09_23/
 
 .pytest_cache/
 .mypy_cache/

@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 Phase 11 migrates the legacy C#/.NET 4.0 document and file handling architecture (`InsurancefinalNew`) into the FastAPI async backend (`Reliable-Insurance-Backend`) with:
-- **Zero Production Exposure**: Strictly local database (`localhost:3306/reliable_insurance_dev`) and local/mock storage (`./storage_data` / `InMemoryObjectStorageBackend`). Production storage identifiers (`brahmainsurance`, `103.149.199.250`, `103.7.181.105`, `103.104.73.198`, `amazonaws.com`) are blocked at configuration validation time.
+- **Zero Production Exposure**: Strictly local database (`localhost:3306/reliable_insurance_dev`) and local/mock storage (`./storage_data` / `InMemoryObjectStorageBackend`). Production storage identifiers (`brahmainsurance`, `[LEGACY_DB_HOST_REDACTED]`, `103.7.181.105`, `103.104.73.198`, `amazonaws.com`) are blocked at configuration validation time.
 - **Additive Unified Registry + Legacy Table Dual-Write**: All document uploads write to the unified `tbl_documents` audit registry while atomically updating legacy physical tables/columns (`tbl_transaction`, `tbl_transactionappnew`, `tbl_app_requestedquotationfile`, `tbl_insurancecompanyquotation`, `tbl_app_quotationrequest`, `tbl_claimdocument`, `tbl_claim.audiofile`, `tbl_appendorsement.SupportingDocKey`).
 - **Legacy Defect Remediation (`DEF-010`)**: Remediated the legacy cross-folder deletion bug (`CL_ClaimNew.aspx.cs:L354`) where replacing a `Claim_Final_Bill_Doc` file deleted files from `~/ClaimPhoto/` instead of `~/Claim_Final_Bill_Doc/`. Each document now stores its canonical `StorageKey` (`{LegacyVirtualFolder}/{entity_slug}/{entity_id}/{stored_filename}`) and replacement only supersedes the matching subtype/key.
 - **Intentional Security Hardening**:

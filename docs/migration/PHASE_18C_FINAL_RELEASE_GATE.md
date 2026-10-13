@@ -236,7 +236,7 @@ All **`6` `UNKNOWN`** database-only groups (`F-17B-114`, `F-17B-115`, `F-17B-116
 ## 19. Production DB Verification
 
 - Active database verified at runtime via `SELECT DATABASE()` $\rightarrow$ **`reliable_insurance_dev`**.
-- `app/core/config.py` production-blocklist validator remains active, blocking `brahmainsurance` and `103.76.254.139`.
+- `app/core/config.py` production-blocklist validator remains active, blocking `brahmainsurance` and `[LEGACY_SOAP_HOST_REDACTED]`.
 - **Production DB Connections**: **`0`**
 - **Production DB Queries**: **`0`**
 

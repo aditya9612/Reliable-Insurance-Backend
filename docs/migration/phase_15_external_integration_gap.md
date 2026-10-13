@@ -25,7 +25,7 @@
 | **SMTP Corporate Email Dispatch** | `SendMailToAutority.aspx.cs` | `NotificationService` (`d13e0f7a1301`) | **MIGRATED (Phase 13)** | Completed | Mock provider default in dev/test. |
 | **External Payment Gateway Webhook** | Legacy manual UTR / gateway | `PaymentService` (`app/services/payment_service.py`) | **PRESERVED UNKNOWN (`GAP-UNK-003`)**| **P2** | Proprietary gateway callback spec unclosed without live provider docs. |
 | **Google Maps Live Employee Tracking**| `Location.aspx.cs`, `GeoLocationClasses.cs` | None (Non-core ERP) | **DEFERRED** | **P3** | GPS coordinate logger. |
-| **InsuranceAppService (External Quote)**| `http://103.76.188.138:85/Service.asmx` | `RatingEngineService` (Internal Engine)| **INTENTIONALLY OBSOLETE** | **P3** | Legacy external quote server; replaced by authoritative internal rating engine. |
+| **InsuranceAppService (External Quote)**| `http://[LEGACY_STAGING_QUOTE_HOST_REDACTED]:85/Service.asmx` | `RatingEngineService` (Internal Engine)| **INTENTIONALLY OBSOLETE** | **P3** | Legacy external quote server; replaced by authoritative internal rating engine. |
 | **Vantage POSP Broker Web Service** | `VantageTestingNewServer.aspx.cs` | None | **INTENTIONALLY OBSOLETE** | **P3** | Deprecated vendor broker server; no longer active. |
 
 ---
@@ -38,5 +38,5 @@
 - **Audit Verdict**: `GAP-UNK-003` is strictly preserved. Zero webhook code should be fabricated without vendor API contracts.
 
 #### 3.2 Obsolete External Web References
-- **`InsuranceAppService`**: Points to a hardcoded legacy IP (`http://103.76.188.138:85/Service.asmx`). The legacy system occasionally forwarded policy parameters (`insertPolicy`) to this server. Phase 6 rating engine and Phase 7 policy booking perform all calculations natively, rendering this external service obsolete.
+- **`InsuranceAppService`**: Points to a hardcoded legacy IP (`http://[LEGACY_STAGING_QUOTE_HOST_REDACTED]:85/Service.asmx`). The legacy system occasionally forwarded policy parameters (`insertPolicy`) to this server. Phase 6 rating engine and Phase 7 policy booking perform all calculations natively, rendering this external service obsolete.
 - **`VantageService`**: Experimental staging web reference for a third-party POSP distributor. No live traffic was processed through it. Classified as **Intentionally Obsolete**.

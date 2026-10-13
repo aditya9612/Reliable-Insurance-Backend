@@ -49,7 +49,7 @@ The investigation examined:
 | **Git Working Tree** | `git status --short` | **CLEAN** | Zero staged files, zero tracked modifications. Only untracked legacy folder and audit documents. |
 | **Commit Baseline** | `git rev-parse HEAD` | **VERIFIED** | `a00899c4af29f1393de6b7ab5c5f4a41579ffdd9` (tejas-feature branch). |
 | **Legacy Source Protection** | Filesystem check | **UNTOUCHED** | `./InsurancefinalNew_2026_09_23/` remains untracked, read-only, and 100% unmodified. |
-| **Production DB Isolation** | Connection audit | **ZERO ACCESS** | 0 connections and 0 queries to `brahmainsurance` or host `103.76.254.139`. Active DB: `reliable_insurance_dev`. |
+| **Production DB Isolation** | Connection audit | **ZERO ACCESS** | 0 connections and 0 queries to `brahmainsurance` or host `[LEGACY_SOAP_HOST_REDACTED]`. Active DB: `reliable_insurance_dev`. |
 | **Production Credentials** | Environment scan | **SECURED** | Zero production secrets or live external endpoints called. All tokens mock/redacted. |
 | **Frozen Logic (`LBR-069`)** | `git diff` audit | **PRESERVED** | `0` diff lines in `UtilityService.enforce_overdue_cheque_locks`. |
 | **Code Modifications** | Read-only enforcement | **ENFORCED** | Zero changes to `app/`, `alembic/`, or `tests/`. |

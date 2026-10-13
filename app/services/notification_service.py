@@ -8,6 +8,7 @@ from app.repositories.notification import NotificationRepository
 from app.models.user import User
 from app.models.transaction import Transaction
 from app.providers.base import SMSProvider, PushNotificationProvider, EmailProvider
+from app.core.config import settings
 from app.schemas.notifications import (
     SMSResult,
     PushResult,
@@ -167,7 +168,7 @@ class NotificationService:
         <tr><td><b>For any query, please contact your Sales Executive.</b></td></tr>
         <tr><td>Regards,</td></tr>
         <tr><td>Reliable Assurance</td></tr>
-        <tr><td>Call: 9822166111</td></tr>
+        <tr><td>Call: {settings.SUPPORT_PHONE_NUMBER}</td></tr>
         </table>
         </body></html>"""
 

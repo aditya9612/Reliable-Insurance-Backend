@@ -96,7 +96,7 @@ Test breakdown:
 
 ## 4. Safety & Environment Audit
 - **Development Database**: `reliable_insurance_dev` on `localhost:3306`
-- **Legacy Database**: `brahmainsurance` on `103.149.199.250:3309`
+- **Legacy Database**: `brahmainsurance` on `[LEGACY_DB_HOST_REDACTED]:3309`
 - **Database Separation**:
   - The local development database contains all 10 newly migrated schema tables with synthetic test data.
   - Zero writes, alters, migrations, or data copies touched the legacy production database.

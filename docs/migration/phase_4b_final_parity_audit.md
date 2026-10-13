@@ -29,7 +29,7 @@ A comprehensive, read-only final parity, safety, and regression audit of the com
 ## 2. Production Safety
 
 In accordance with the mandatory safety rules:
-- **Legacy Production Database Isolated**: No connections to `103.149.199.250`, port `3309`, or `brahmainsurance` occurred during Phase 4B implementation or this audit.
+- **Legacy Production Database Isolated**: No connections to `[LEGACY_DB_HOST_REDACTED]`, port `3309`, or `brahmainsurance` occurred during Phase 4B implementation or this audit.
 - **No Production Credentials**: Zero legacy credentials exist in `.env`, `.env.example`, Git history, or test fixtures.
 - **Independent Runtime Environment**: Runtime database strictly verified as `mysql+aiomysql://root:***@localhost:3306/reliable_insurance_dev`.
 - **Zero Modifications**: No DDL, DML, drops, truncates, or resets executed during this audit.
@@ -274,7 +274,7 @@ Audited all Phase 4B source files for prohibited business logic:
 
 ## 12. Production Reference Scan
 
-A full text search across newly added/modified Phase 4B files was executed for production IP (`103.149.199.250`), port (`3309`), database name (`brahmainsurance`), and credentials (`admin_sa`):
+A full text search across newly added/modified Phase 4B files was executed for production IP (`[LEGACY_DB_HOST_REDACTED]`), port (`3309`), database name (`brahmainsurance`), and credentials (`[LEGACY_DB_USER_REDACTED]`):
 
 | File Path | Matches | Nature of Match | Risk Assessment |
 |---|---|---|---|

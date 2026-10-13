@@ -47,7 +47,7 @@
 
 ### 3. Secret Scan
 - **Scan Targets**: All tracked and untracked Phase 12 code, tests, migrations, and documentation.
-- **Keywords Scanned**: `password`, `secret`, `api_key`, `token`, `brahmainsurance`, `103.149.199.250`, `103.7.181.105`, `103.104.73.198`, `amazonaws.com`.
+- **Keywords Scanned**: `password`, `secret`, `api_key`, `token`, `brahmainsurance`, `[LEGACY_DB_HOST_REDACTED]`, `103.7.181.105`, `103.104.73.198`, `amazonaws.com`.
 - **Results**:
   - Production DB identifiers (`brahmainsurance`) exist ONLY in unit test assertion guards (`assert "brahmainsurance" not in settings.DATABASE_URL`).
   - Zero hardcoded passwords, AWS secrets, OneSignal keys, Signzy tokens, or production hostnames in Phase 12 code.

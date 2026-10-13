@@ -1,8 +1,8 @@
 # Phase 0 Read-Only Verification Report
 ## Reliable Assurance: Legacy C# (.NET 4.0) to FastAPI Backend Migration
-**Database Catalog**: `brahmainsurance` (MySQL 8.0 on Port 3309 at `103.149.199.250`)  
-**Target Repository**: `Reliable-Insurance-Backend`  
-**Verification Date**: October 2026  
+**Database Catalog**: `brahmainsurance` (MySQL 8.0 on Port 3309 at `[LEGACY_DB_HOST_REDACTED]`)
+**Target Repository**: `Reliable-Insurance-Backend`
+**Verification Date**: October 2026
 **Status**: COMPLETE (STOP CONDITION REACHED — AWAITING REVIEW & APPROVAL)
 
 ---
@@ -12,7 +12,7 @@
 In accordance with the **Strict Migration Rules** and **Master Architectural Contract (`29_MIGRATION_SOURCE_OF_TRUTH.md`)**, this Phase 0 verification was conducted entirely in **READ-ONLY** mode:
 1. **Zero modifications** were made to the legacy C# project, live MySQL database, or new repository code.
 2. All 29 migration audit documents and `README.md` were ingested and cross-referenced against the legacy C# codebase (`Insurance.sln`, `DAL\DAL_Operations.cs`, `BLL\BLL_Operations.cs`, `API\AllMaster.cs`, `Insurance\Service.asmx.cs`, `Web.config`).
-3. Direct live introspection was performed against the production MySQL database (`103.149.199.250:3309/brahmainsurance`) using PyMySQL read queries against `information_schema.TABLES`, `information_schema.COLUMNS`, `information_schema.ROUTINES`, `information_schema.TRIGGERS`, and `information_schema.TABLE_CONSTRAINTS`.
+3. Direct live introspection was performed against the production MySQL database (`[LEGACY_DB_HOST_REDACTED]:3309/brahmainsurance`) using PyMySQL read queries against `information_schema.TABLES`, `information_schema.COLUMNS`, `information_schema.ROUTINES`, `information_schema.TRIGGERS`, and `information_schema.TABLE_CONSTRAINTS`.
 
 ### Major Critical Findings Uncovered in Phase 0:
 - **Schema & Naming Discrepancies**: The audit documents documented idealized DTO names from C# rather than the real live MySQL schema. For example, `tbl_transaction` in production has **166 columns** (not ~30), the primary key is named **`TransanctionId`** (with an 'n'), premiums are spelled **`ODPermium`**, **`TPPermium`**, **`NetPermium`**, and status is **`TStatus`**.
@@ -30,7 +30,7 @@ Every audit document was read, verified against legacy code, and tested against 
 
 | Document | Topic | Codebase Verification | Live DB Verification Status | Gaps Identified |
 |---|---|---|---|---|
-| `01_PROJECT_STRUCTURE.md` | Solution & tech stack | Verified: .NET 4.0, C# 4.0, ADO.NET, MySQL.Data | Verified: MySQL host `103.149.199.250:3309` | None |
+| `01_PROJECT_STRUCTURE.md` | Solution & tech stack | Verified: .NET 4.0, C# 4.0, ADO.NET, MySQL.Data | Verified: MySQL host `[LEGACY_DB_HOST_REDACTED]:3309` | None |
 | `02_API_ENDPOINT_INVENTORY.md`| 379+ entry points | Verified: 320 ASMX, 2 VehicleService, 57 PageMethods | Endpoint contracts mapped | Many endpoints invoke SPs that have multiple historical iterations (`_4` to `_8`) |
 | `03_DATABASE_SCHEMA_AUDIT.md` | Core tables & fields | Partially Verified from C# DTOs (`API\AllMaster.cs`) | **MISMATCH FOUND**: Column names and counts differ significantly from live DB | Audit used DTO names instead of real MySQL column names |
 | `04_DATABASE_RELATIONSHIP_MAP.md`| ER relationships | Verified logical relationships | **0 FK constraints in MySQL engine** | Relational integrity is entirely application-level |
@@ -66,7 +66,7 @@ Every audit document was read, verified against legacy code, and tested against 
 
 ### 3.1 Fully Verified Components (Evidence Confirmed in Code & Live DB)
 1. **Database Connectivity & Live Schema**:
-   - Live MySQL server on `103.149.199.250:3309` catalog `brahmainsurance` successfully connected and introspected.
+   - Live MySQL server on `[LEGACY_DB_HOST_REDACTED]:3309` catalog `brahmainsurance` successfully connected and introspected.
    - 374 base tables, 22 views, 1 trigger, 1,980 procedures, 3 functions verified.
 2. **Gross & Net Premium Math (BR-PRM-001 / BR-PRM-002)**:
    - `Net Premium = OD Premium + TP Premium + AddOn Charges - OD Discount`.
@@ -132,7 +132,7 @@ Every audit document was read, verified against legacy code, and tested against 
 
 ## 5. Stored Procedure Classification & Inventory
 
-Live database query verified **1,980 procedures and 3 functions**.  
+Live database query verified **1,980 procedures and 3 functions**.
 Code analysis of `DAL_Operations.cs` and `Service.asmx.cs` identified **1,855 unique procedure calls**:
 - **1,765 procedures match existing live MySQL procedures**.
 - **90 procedures called in C# do NOT exist in the live database**.
@@ -194,7 +194,7 @@ flowchart TD
     R4["Risk 4: E-Wallet Double Spending<br/>(Non-atomic check-then-decrement)"]
     R5["Risk 5: Plaintext Passwords in tbl_user<br/>(Must upgrade to bcrypt transparently on login)"]
     R6["Risk 6: 90 Missing Stored Procedures<br/>(Legacy code references missing routines)"]
-    
+
     R1 --> Mit1["Mitigation: Generate models matching live DDL exactly"]
     R2 --> Mit2["Mitigation: Application-level relationship definitions in SQLAlchemy"]
     R3 --> Mit3["Mitigation: Atomic sequence or SELECT FOR UPDATE transaction lock"]
@@ -256,7 +256,7 @@ flowchart LR
    - Pydantic `BaseSettings` reading environment variables for MySQL connection string, Redis URL, JWT secret key, and external integration tokens.
 2. **Database Engine & Session (`app/db/session.py`)**:
    - Async SQLAlchemy engine using `aiomysql`:
-     `mysql+aiomysql://admin_sa:***@103.149.199.250:3309/brahmainsurance`
+     `mysql+aiomysql://[LEGACY_DB_USER_REDACTED]:***@[LEGACY_DB_HOST_REDACTED]:3309/brahmainsurance`
    - Connection pool configuration: `pool_size=20`, `max_overflow=10`, `pool_recycle=3600`.
 3. **Security & Cryptography (`app/core/security.py`)**:
    - OAuth2 Password Bearer token flow with JWT (`HS256`, 60-minute expiration).

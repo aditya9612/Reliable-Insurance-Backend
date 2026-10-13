@@ -16,7 +16,7 @@ Phase 5D successfully implements the first operational runtime service and REST 
 In accordance with strict phase boundaries:
 - **Exactly 4 REST endpoints** were implemented.
 - **Zero search, delete, quotation, rating, or booking endpoints** were introduced.
-- **Zero connections** to legacy production database (`103.149.199.250:3309` / `brahmainsurance`).
+- **Zero connections** to legacy production database (`[LEGACY_DB_HOST_REDACTED]:3309` / `brahmainsurance`).
 - **Zero new database migrations or schema tables** were created.
 - **All 85 baseline tests remain green**, and **22 new tests** (6 unit + 16 integration) were added, achieving **107/107 passed tests (100%)**.
 

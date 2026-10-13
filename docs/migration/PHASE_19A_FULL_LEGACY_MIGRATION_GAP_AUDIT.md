@@ -60,7 +60,7 @@ The scope of this audit encompassed:
 | **Git Working Tree** | Clean / Unstaged | `git status --short` confirms zero staged files, zero modified files. |
 | **Legacy Directory** | Untracked & Unmodified | `./InsurancefinalNew_2026_09_23/` remains `??` untracked, zero modified files. |
 | **Production DB Access** | Zero Access | `SELECT DATABASE()` confirms active DB is `reliable_insurance_dev`. Zero queries to `brahmainsurance`. |
-| **Production Credentials** | Zero Secrets Exposed | `app/core/config.py` blocks `brahmainsurance` and `103.76.254.139`. All tokens redacted as `SECRET_PRESENT_IN_LEGACY_SOURCE`. |
+| **Production Credentials** | Zero Secrets Exposed | `app/core/config.py` blocks `brahmainsurance` and `[LEGACY_SOAP_HOST_REDACTED]`. All tokens redacted as `SECRET_PRESENT_IN_LEGACY_SOURCE`. |
 | **Code Modifications** | Zero Changes | Audit-only execution. Zero lines added/modified/deleted in `app/`, `alembic/`, `tests/`. |
 | **Frozen Logic (`LBR-069`)** | Untouched | `git diff app/services/utility_service.py` confirmed 0 diff lines. |
 

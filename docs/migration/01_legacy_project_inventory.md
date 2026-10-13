@@ -94,7 +94,7 @@ The legacy system (**Brahma / Reliable Insurance ERP**) is a monolithic 4-projec
 | `AjaxControlToolkit` | `bin\AjaxControlToolkit.dll` | `Insurance` | ASP.NET WebForms UI extenders (calendars, modal popups, autocomplete). |
 
 ### Legacy Web References (`Insurance\Web References\`)
-1. **`InsuranceAppService`**: Points to `http://103.76.188.138:85/Service.asmx` (`Reference.cs` exposes `insertPolicy`, `insertPolicyAsync` taking `TransDate, PolicyType, Name, ContactNo, ODDiscount, NCB, Premium, IDV, IMT23, UserId`).
+1. **`InsuranceAppService`**: Points to `http://[LEGACY_STAGING_QUOTE_HOST_REDACTED]:85/Service.asmx` (`Reference.cs` exposes `insertPolicy`, `insertPolicyAsync` taking `TransDate, PolicyType, Name, ContactNo, ODDiscount, NCB, Premium, IDV, IMT23, UserId`).
 2. **`VantageService`**: Points to external Vantage POSP integration web service (`VantageTestingNewServer.aspx.cs`).
 
 ---

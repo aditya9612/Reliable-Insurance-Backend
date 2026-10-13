@@ -38,7 +38,7 @@ The comprehensive source audit of all 147 BLL classes, 1,776 unique stored proce
 ## 3. Honest Resolution of the Six UNKNOWN Feature Groups
 
 In accordance with strict safety policy:
-- Direct queries or connections to the production database `brahmainsurance` (`103.76.254.139`) are strictly forbidden.
+- Direct queries or connections to the production database `brahmainsurance` (`[LEGACY_SOAP_HOST_REDACTED]`) are strictly forbidden.
 - No synthetic stored procedure logic or imaginary database routines may be fabricated.
 - Unextracted routine bodies (`F-17B-114` through `F-17B-117`, `F-17B-119`) and unreferenced catalog tables (`F-17B-120`) remain preserved as **`UNKNOWN (Database-Only)`**.
 - Their known parameter signatures and C# DAL contracts remain fully implemented in Python services without claiming fabricated line-by-line SQL parity.

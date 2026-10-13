@@ -1,6 +1,6 @@
 import json
 from typing import List, Union
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -89,9 +89,45 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = "mock-smtp-app-password"
     SMTP_FROM_EMAIL: str = "reliable.mis1@gmail.com"
 
+    # Broker & Customer Support Contact Configuration
+    SUPPORT_PHONE_NUMBER: str = "9822166111"
+
     OTP_TTL_SECONDS: int = 300
     OTP_MAX_ATTEMPTS: int = 3
     OTP_RESEND_COOLDOWN_SECONDS: int = 60
+
+    @model_validator(mode="after")
+    def validate_production_security(self) -> "Settings":
+        """
+        Enforce strict production security checks:
+        When APP_ENV is production, JWT_SECRET_KEY must be explicitly supplied,
+        must not use default/placeholder values, and must satisfy minimum entropy requirements.
+        """
+        app_env = (self.APP_ENV or "").strip().lower()
+        if app_env in ("production", "prod"):
+            secret = (self.JWT_SECRET_KEY or "").strip()
+            known_insecure = {
+                "reliable-insurance-default-secret-key-32-chars-minimum",
+                "insecure-placeholder-change-in-production-must-be-at-least-32-chars",
+                "reliable-insurance-dev-secret-key-32-chars-long!!",
+                "secret",
+                "changeme",
+                "password",
+            }
+            lower_sec = secret.lower()
+            if not secret:
+                raise ValueError(
+                    "Production configuration error: JWT_SECRET_KEY must be explicitly provided in production environment."
+                )
+            if lower_sec in known_insecure or "dev-secret" in lower_sec or "placeholder" in lower_sec or "default-secret" in lower_sec:
+                raise ValueError(
+                    "Production configuration error: Known development placeholder or default JWT_SECRET_KEY is forbidden in production."
+                )
+            if len(secret) < 32:
+                raise ValueError(
+                    "Production configuration error: JWT_SECRET_KEY must be at least 32 characters in production."
+                )
+        return self
 
     @field_validator("DATABASE_URL")
     @classmethod
@@ -105,7 +141,9 @@ class Settings(BaseSettings):
             "brahmainsurance",
             "103.149.199.250",
             "103.7.181.105",
-            "103.104.73.198"
+            "103.104.73.198",
+            "103.76.254.139",
+            "103.76.188.138",
         ]
         lower_v = v.lower()
         for pattern in forbidden_patterns:
@@ -129,6 +167,8 @@ class Settings(BaseSettings):
             "103.149.199.250",
             "103.7.181.105",
             "103.104.73.198",
+            "103.76.254.139",
+            "103.76.188.138",
             "amazonaws.com",
         ]
         lower_v = v.lower()
