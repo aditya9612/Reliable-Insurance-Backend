@@ -25,6 +25,7 @@ from app.api.v1.endpoints import (
     phase21_nonmotor,
     phase22,
     phase23,
+    phase24,
 )
 
 api_router = APIRouter()
@@ -282,3 +283,12 @@ api_router.include_router(phase23.hr_holidays_router)
 api_router.include_router(phase23.hr_leave_types_router)
 api_router.include_router(phase23.hr_leaves_router)
 api_router.include_router(phase23.hr_contacts_router)
+
+# Mount Phase 24 HR Workforce Lifecycle, Compensation, Advances & Attendance endpoints
+api_router.include_router(phase24.hr_working_history_router)
+api_router.include_router(phase24.hr_family_details_router)
+api_router.include_router(phase24.hr_references_router)
+api_router.include_router(phase24.hr_working_time_router)
+api_router.include_router(phase24.hr_salary_structures_router)
+api_router.include_router(phase24.hr_advances_router)
+api_router.include_router(phase24.hr_monthly_working_router)

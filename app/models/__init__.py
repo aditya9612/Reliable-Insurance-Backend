@@ -143,6 +143,15 @@ from app.models.phase23_features import (
     HRLeave,
     HRContactPerson,
 )
+from app.models.phase24_features import (
+    HRWorkingHistory,
+    HRFamilyDetails,
+    HRReferenceDetails,
+    HRWorkingTime,
+    HRSalaryStructureDef,
+    HRAdvance,
+    HRMonthlyWorkingDetails,
+)
 
 __all__ = [
     "Base",
@@ -263,4 +272,11 @@ __all__ = [
     "HRLeaveType",
     "HRLeave",
     "HRContactPerson",
+    "HRWorkingHistory",
+    "HRFamilyDetails",
+    "HRReferenceDetails",
+    "HRWorkingTime",
+    "HRSalaryStructureDef",
+    "HRAdvance",
+    "HRMonthlyWorkingDetails",
 ]
