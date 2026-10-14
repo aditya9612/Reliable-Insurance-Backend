@@ -3,18 +3,16 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, Tuple
 import jwt
 from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi import Depends, HTTPException, status
 from app.core.config import settings
 
 # Password hashing context with bcrypt (12 rounds)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
 
-# OAuth2 Bearer scheme for token extraction
-oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_PREFIX}/auth/login",
-    auto_error=False
-)
+# HTTP Bearer scheme for token extraction & Swagger UI authorization modal (single Value input)
+http_bearer = HTTPBearer(auto_error=False)
+oauth2_scheme = http_bearer
 
 
 def verify_password(plain_password: str, hashed_or_plain_password: str) -> Tuple[bool, bool]:
@@ -119,17 +117,17 @@ def decode_access_token(token: str) -> Dict[str, Any]:
 
 
 async def get_current_token_payload(
-    token: Optional[str] = Depends(oauth2_scheme)
+    auth: Optional[HTTPAuthorizationCredentials] = Depends(http_bearer),
 ) -> Dict[str, Any]:
     """
     Foundational authentication dependency.
     Extracts and validates the JWT Bearer token payload.
     Reusable by future RBAC and ownership verification dependencies.
     """
-    if not token:
+    if not auth or not auth.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication credentials were not provided",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return decode_access_token(token)
+    return decode_access_token(auth.credentials)
