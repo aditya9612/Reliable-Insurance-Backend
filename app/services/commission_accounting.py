@@ -81,8 +81,37 @@ def round_2dp(val: Decimal) -> Decimal:
     return val.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
+class _EventLoopBoundLock:
+    """Asyncio lock that binds to the current running event loop, avoiding cross-loop errors in pytest."""
+    def __init__(self):
+        self._locks: Dict[asyncio.AbstractEventLoop, asyncio.Lock] = {}
+
+    def _get_lock(self) -> asyncio.Lock:
+        loop = asyncio.get_running_loop()
+        lock = self._locks.get(loop)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._locks[loop] = lock
+        return lock
+
+    async def acquire(self):
+        return await self._get_lock().acquire()
+
+    def release(self):
+        return self._get_lock().release()
+
+    def locked(self) -> bool:
+        return self._get_lock().locked()
+
+    async def __aenter__(self):
+        return await self._get_lock().__aenter__()
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        return await self._get_lock().__aexit__(exc_type, exc_val, exc_tb)
+
+
 # Process-wide async mutex serializing commission payouts, reversals, and voucher sequence allocation
-_COMMISSION_WRITE_LOCK = asyncio.Lock()
+_COMMISSION_WRITE_LOCK = _EventLoopBoundLock()
 
 _AGENT_ROLES_NORM = frozenset(_normalize(r) for r in AGENT_PRINCIPAL_ROLES)
 _FRANCHISE_ROLES_NORM = frozenset(_normalize(r) for r in FRANCHISE_PRINCIPAL_ROLES)

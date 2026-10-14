@@ -366,15 +366,48 @@ class CommissionAccountingRepository:
     async def allocate_next_doc_no(self) -> int:
         """
         Concurrency-safe allocation of the next monotonically increasing `Doc_No` in `tbl_account`.
-        Uses `with_for_update().execution_options(populate_existing=True)` inside `_COMMISSION_WRITE_LOCK`.
+        Coordinated across all accounting voucher and commercial invoicing writers via the
+        database-backed `tbl_invoicesequence` row 'ACCOUNT_DOC_NO' with pessimistic row locking
+        (SELECT ... FOR UPDATE).
         """
-        stmt = (
-            select(func.coalesce(func.max(Account.Doc_No), 1000))
+        from app.models.phase25_features import InvoiceSequence
+
+        dialect_name = self.session.bind.dialect.name if self.session.bind else "mysql"
+        now_dt = datetime.utcnow()
+
+        # 1. Concurrency-safe initialization via native UPSERT to avoid race conditions
+        if dialect_name == "sqlite":
+            from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+            init_stmt = (
+                sqlite_insert(InvoiceSequence)
+                .values(SequenceName="ACCOUNT_DOC_NO", CurrentValue=1000, UpdatedDate=now_dt)
+                .on_conflict_do_nothing()
+            )
+        else:
+            from sqlalchemy.dialects.mysql import insert as mysql_insert
+            init_stmt = (
+                mysql_insert(InvoiceSequence)
+                .values(SequenceName="ACCOUNT_DOC_NO", CurrentValue=1000, UpdatedDate=now_dt)
+                .on_duplicate_key_update(SequenceName=InvoiceSequence.SequenceName)
+            )
+        await self.session.execute(init_stmt)
+
+        # 2. Lock sequence row exclusively
+        seq_stmt = (
+            select(InvoiceSequence)
+            .where(InvoiceSequence.SequenceName == "ACCOUNT_DOC_NO")
             .with_for_update()
-            .execution_options(populate_existing=True)
         )
-        max_doc = int((await self.session.execute(stmt)).scalar() or 1000)
-        return max(max_doc, 1000) + 1
+        seq = (await self.session.execute(seq_stmt)).scalar_one()
+
+        # 3. Synchronize with max historical Doc_No in tbl_account to prevent regressions/collisions
+        acc_max_stmt = select(func.coalesce(func.max(Account.Doc_No), 1000))
+        acc_max = int((await self.session.execute(acc_max_stmt)).scalar() or 1000)
+
+        # 4. Monotonically increment
+        seq.CurrentValue = max(seq.CurrentValue, acc_max) + 1
+        seq.UpdatedDate = now_dt
+        return seq.CurrentValue
 
     async def create_account_entry(self, entry: Account) -> Account:
         self.session.add(entry)

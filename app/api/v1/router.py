@@ -26,6 +26,7 @@ from app.api.v1.endpoints import (
     phase22,
     phase23,
     phase24,
+    phase25,
 )
 
 api_router = APIRouter()
@@ -292,3 +293,10 @@ api_router.include_router(phase24.hr_working_time_router)
 api_router.include_router(phase24.hr_salary_structures_router)
 api_router.include_router(phase24.hr_advances_router)
 api_router.include_router(phase24.hr_monthly_working_router)
+
+# Mount Phase 25 Corporate Group Clients, Commercial Sales Invoicing & Sister Concern Advances endpoints
+api_router.include_router(phase25.sales_types_router)
+api_router.include_router(phase25.reliable_companies_router)
+api_router.include_router(phase25.corporate_clients_router)
+api_router.include_router(phase25.commercial_invoices_router)
+api_router.include_router(phase25.company_advances_router)

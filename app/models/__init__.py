@@ -152,6 +152,15 @@ from app.models.phase24_features import (
     HRAdvance,
     HRMonthlyWorkingDetails,
 )
+from app.models.phase25_features import (
+    SalesType,
+    ReliableCompany,
+    ClientMaster,
+    SalesRegDetails,
+    CompanyAdvanceMaster,
+    CompanyAdvDetail,
+    InvoiceSequence,
+)
 
 __all__ = [
     "Base",
@@ -279,4 +288,11 @@ __all__ = [
     "HRSalaryStructureDef",
     "HRAdvance",
     "HRMonthlyWorkingDetails",
+    "SalesType",
+    "ReliableCompany",
+    "ClientMaster",
+    "SalesRegDetails",
+    "CompanyAdvanceMaster",
+    "CompanyAdvDetail",
+    "InvoiceSequence",
 ]
