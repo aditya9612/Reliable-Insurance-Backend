@@ -27,6 +27,7 @@ from app.api.v1.endpoints import (
     phase23,
     phase24,
     phase25,
+    phase26,
 )
 
 api_router = APIRouter()
@@ -300,3 +301,6 @@ api_router.include_router(phase25.reliable_companies_router)
 api_router.include_router(phase25.corporate_clients_router)
 api_router.include_router(phase25.commercial_invoices_router)
 api_router.include_router(phase25.company_advances_router)
+
+# Mount Phase 26 Emergency Roadside Claim Assistance & Accident Intake endpoints
+api_router.include_router(phase26.claim_assistance_router)

@@ -161,6 +161,11 @@ from app.models.phase25_features import (
     CompanyAdvDetail,
     InvoiceSequence,
 )
+from app.models.phase26_features import (
+    ClaimAssistance,
+    ClaimAssistanceImg,
+)
+
 
 __all__ = [
     "Base",
@@ -295,4 +300,6 @@ __all__ = [
     "CompanyAdvanceMaster",
     "CompanyAdvDetail",
     "InvoiceSequence",
+    "ClaimAssistance",
+    "ClaimAssistanceImg",
 ]
