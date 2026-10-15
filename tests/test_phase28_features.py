@@ -516,3 +516,144 @@ async def test_margin_validation_constraints(
         headers=admin_headers,
     )
     assert resp.status_code == 422
+
+
+# ==============================================================================
+# 5. END-TO-END COMMISSION & POLICY BOOKING INTEGRATION TESTS
+# ==============================================================================
+
+@pytest.mark.asyncio
+async def test_end_to_end_policy_booking_with_franchise_margin(
+    async_client: AsyncClient, db_session: AsyncSession
+):
+    """
+    Verifies that policy booking (/api/v1/policies/book) dynamically consumes
+    tbl_franchisegridmargin to deduce agent commission and credit franchise spread.
+    """
+    import uuid
+    from tests.integration.test_phase7_policy_booking_api import create_synthetic_customer_and_vehicle
+    from app.models.commission import FranchiseCommission
+
+    admin_user, admin_headers = await create_user_with_role(db_session, "ADMIN")
+    cust, veh = await create_synthetic_customer_and_vehicle(
+        db_session, branch_id=101, reg_no=f"MH14M{uuid.uuid4().hex[:6].upper()}"
+    )
+
+    franchise_id = 888
+    agent_id = 999
+    company_id = 1
+    policy_type_id = 1
+
+    # 1. Configure custom Franchise Margin of 3.50% in tbl_franchisegridmargin
+    margin_payload = {
+        "franchise_id": franchise_id,
+        "franchise_agent_id": agent_id,
+        "insurance_company_id": company_id,
+        "policy_type_id": policy_type_id,
+        "margin": "3.50",
+    }
+    m_resp = await async_client.post(
+        "/api/v1/franchise-margins",
+        json=margin_payload,
+        headers=admin_headers,
+    )
+    assert m_resp.status_code == 200
+
+    # 2. Book policy with Gross Grid = 15.00% OD
+    booking_payload = {
+        "customer_id": cust.CustomerId,
+        "cust_veh_id": veh.CustVehId,
+        "insurance_company_id": company_id,
+        "policy_type_id": policy_type_id,
+        "vehicle_category": "PVT",
+        "od_premium": "10000.00",
+        "tp_premium": "0.00",
+        "commission": {
+            "agent_id": agent_id,
+            "franchise_id": franchise_id,
+            "agent_comm_od_percent": "15.00",
+            "tds_percent": "5.00",
+        },
+        "payments": [{"payment_type": "CASH", "paid_amount": "11800.00"}],
+    }
+
+    book_resp = await async_client.post(
+        "/api/v1/policies/book",
+        json=booking_payload,
+        headers=admin_headers,
+    )
+    assert book_resp.status_code == 201, book_resp.text
+    book_data = book_resp.json()
+    tx_id = book_data["transaction_id"]
+
+    # 3. Verify Agent Commission in API response was deducted:
+    # Gross Grid (15.00%) - Margin (3.50%) = Net Agent Grid (11.50%)
+    comm_resp = book_data["commission_summary"]
+    assert Decimal(str(comm_resp["agent_comm_od_percent"])) == Decimal("11.50")
+    # Agent Gross = 10,000 * 11.5% = 1,150.00
+    assert Decimal(str(comm_resp["total_gross_commission"])) == Decimal("1150.00")
+    # Franchise Gross = 10,000 * 15.0% = 1,500.00
+    assert Decimal(str(comm_resp["franchise_gross_commission"])) == Decimal("1500.00")
+
+    # 4. Verify in database tbl_franchisecommission
+    await db_session.commit()
+    fc_stmt = select(FranchiseCommission).where(FranchiseCommission.TransanctionId == tx_id)
+    fc_record = (await db_session.execute(fc_stmt)).scalars().first()
+    assert fc_record is not None
+    assert fc_record.FranchiseId == franchise_id
+    assert fc_record.AgentId == agent_id
+    assert Decimal(str(fc_record.FranchiseCommAmt_OD)) == Decimal("1500.00")
+    # Profit of Net Commission should reflect franchise spread (1425 - 1092.50 = 332.50 net)
+    assert Decimal(str(fc_record.ProfitofNetCommision)) > Decimal("0.00")
+
+
+@pytest.mark.asyncio
+async def test_batch_upsert_concurrency_safety(
+    async_client: AsyncClient, db_session: AsyncSession
+):
+    """
+    Verifies that concurrent batch upserts do not create duplicate active rows
+    due to race conditions.
+    """
+    import asyncio
+    admin_user, admin_headers = await create_user_with_role(db_session, "ADMIN")
+
+    franchise_id = 777
+    agent_id = 778
+    company_id = 10
+    policy_type_ids = [101, 102, 103]
+
+    payloads = [
+        {
+            "franchise_id": franchise_id,
+            "franchise_agent_id": agent_id,
+            "insurance_company_id": company_id,
+            "policy_type_ids": policy_type_ids,
+            "margin": f"{3.0 + i * 0.5:.2f}",
+        }
+        for i in range(3)
+    ]
+
+    # Execute 3 concurrent requests simultaneously
+    responses = await asyncio.gather(
+        *(
+            async_client.post(
+                "/api/v1/franchise-margins/batch",
+                json=p,
+                headers=admin_headers,
+            )
+            for p in payloads
+        )
+    )
+    for r in responses:
+        assert r.status_code == 200
+
+    # Ensure exactly 3 rows exist in DB (1 per policy_type_id, no duplicates)
+    await db_session.commit()
+    count_stmt = select(FranchiseGridMargin).where(
+        FranchiseGridMargin.FranchiseId == franchise_id,
+        FranchiseGridMargin.FranchiseAgentId == agent_id,
+        FranchiseGridMargin.isdeleted == 0,
+    )
+    rows = (await db_session.execute(count_stmt)).scalars().all()
+    assert len(rows) == 3

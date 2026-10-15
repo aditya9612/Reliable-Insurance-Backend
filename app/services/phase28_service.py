@@ -4,6 +4,7 @@ Franchise Agent Grid Margin Override Engine.
 Physical Tables:
 1. tbl_franchisegridmargin (FranchiseGridMargin)
 """
+import asyncio
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from typing import List, Optional, Tuple
@@ -26,6 +27,9 @@ from app.schemas.phase28 import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Mutex to guarantee concurrency-safe margin upserts and prevent duplicate active rows
+_MARGIN_WRITE_LOCK = asyncio.Lock()
 
 
 class FranchiseGridMarginService:
@@ -64,15 +68,20 @@ class FranchiseGridMarginService:
         """
         self._validate_franchise_access(payload.franchise_id, principal)
 
-        stmt = select(FranchiseGridMargin).where(
-            and_(
-                FranchiseGridMargin.FranchiseId == payload.franchise_id,
-                FranchiseGridMargin.FranchiseAgentId == payload.franchise_agent_id,
-                FranchiseGridMargin.InsuranceCompanyId == payload.insurance_company_id,
-                FranchiseGridMargin.PolicyTypeId == payload.policy_type_id,
-                FranchiseGridMargin.isdeleted == 0,
+        async with _MARGIN_WRITE_LOCK:
+            stmt = (
+                select(FranchiseGridMargin)
+                .where(
+                    and_(
+                        FranchiseGridMargin.FranchiseId == payload.franchise_id,
+                        FranchiseGridMargin.FranchiseAgentId == payload.franchise_agent_id,
+                        FranchiseGridMargin.InsuranceCompanyId == payload.insurance_company_id,
+                        FranchiseGridMargin.PolicyTypeId == payload.policy_type_id,
+                        FranchiseGridMargin.isdeleted == 0,
+                    )
+                )
+                .with_for_update()
             )
-        )
         existing = (await self.db.execute(stmt)).scalars().first()
 
         now = datetime.utcnow()
@@ -113,41 +122,46 @@ class FranchiseGridMarginService:
         username = principal.username or f"user_{principal.user_id}"
         results: List[FranchiseGridMargin] = []
 
-        for pt_id in payload.policy_type_ids:
-            stmt = select(FranchiseGridMargin).where(
-                and_(
-                    FranchiseGridMargin.FranchiseId == payload.franchise_id,
-                    FranchiseGridMargin.FranchiseAgentId == payload.franchise_agent_id,
-                    FranchiseGridMargin.InsuranceCompanyId == payload.insurance_company_id,
-                    FranchiseGridMargin.PolicyTypeId == pt_id,
-                    FranchiseGridMargin.isdeleted == 0,
+        async with _MARGIN_WRITE_LOCK:
+            for pt_id in payload.policy_type_ids:
+                stmt = (
+                    select(FranchiseGridMargin)
+                    .where(
+                        and_(
+                            FranchiseGridMargin.FranchiseId == payload.franchise_id,
+                            FranchiseGridMargin.FranchiseAgentId == payload.franchise_agent_id,
+                            FranchiseGridMargin.InsuranceCompanyId == payload.insurance_company_id,
+                            FranchiseGridMargin.PolicyTypeId == pt_id,
+                            FranchiseGridMargin.isdeleted == 0,
+                        )
+                    )
+                    .with_for_update()
                 )
-            )
-            existing = (await self.db.execute(stmt)).scalars().first()
+                existing = (await self.db.execute(stmt)).scalars().first()
 
-            if existing:
-                existing.margin = payload.margin
-                existing.UpdatedUser = username
-                existing.UpdatedDate = now
-                results.append(existing)
-            else:
-                new_margin = FranchiseGridMargin(
-                    FranchiseId=payload.franchise_id,
-                    FranchiseAgentId=payload.franchise_agent_id,
-                    InsuranceCompanyId=payload.insurance_company_id,
-                    PolicyTypeId=pt_id,
-                    margin=payload.margin,
-                    isdeleted=0,
-                    CreatedUser=username,
-                    CreatedDate=now,
-                )
-                self.db.add(new_margin)
-                results.append(new_margin)
+                if existing:
+                    existing.margin = payload.margin
+                    existing.UpdatedUser = username
+                    existing.UpdatedDate = now
+                    results.append(existing)
+                else:
+                    new_margin = FranchiseGridMargin(
+                        FranchiseId=payload.franchise_id,
+                        FranchiseAgentId=payload.franchise_agent_id,
+                        InsuranceCompanyId=payload.insurance_company_id,
+                        PolicyTypeId=pt_id,
+                        margin=payload.margin,
+                        isdeleted=0,
+                        CreatedUser=username,
+                        CreatedDate=now,
+                    )
+                    self.db.add(new_margin)
+                    results.append(new_margin)
 
-        await self.db.commit()
-        for r in results:
-            await self.db.refresh(r)
-        return results
+            await self.db.commit()
+            for r in results:
+                await self.db.refresh(r)
+            return results
 
     async def get_margin_by_id(
         self, margin_id: int, principal: PrincipalContext

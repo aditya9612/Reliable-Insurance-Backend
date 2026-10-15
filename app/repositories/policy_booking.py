@@ -13,7 +13,7 @@ Encapsulates all SQLAlchemy 2.0 AsyncSession queries and writes for:
 from datetime import date, datetime
 from decimal import Decimal
 from typing import List, Optional, Sequence, Tuple
-from sqlalchemy import desc, func, or_, select, text
+from sqlalchemy import desc, func, or_, and_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.account import Account
@@ -28,6 +28,7 @@ from app.models.payment import TransactionPayment
 from app.models.transaction import Transaction
 from app.models.transaction_app import TransactionAppNew
 from app.models.vehicle import VehicleDetails
+from app.models.phase28_features import FranchiseGridMargin
 
 
 def resolve_financial_year(target_date: Optional[date] = None) -> Tuple[str, str]:
@@ -350,6 +351,28 @@ class PolicyBookingRepository:
             )
         res = await self.session.execute(stmt)
         return res.scalars().all()
+
+    async def get_franchise_grid_margin(
+        self,
+        franchise_id: int,
+        agent_id: int,
+        insurance_company_id: int,
+        policy_type_id: int,
+    ) -> Optional[FranchiseGridMargin]:
+        """
+        Retrieves active custom franchise margin override for an agent, company, and policy type.
+        Legacy Parity: sp_franchsieGridMargin (SELECT2).
+        """
+        stmt = select(FranchiseGridMargin).where(
+            and_(
+                FranchiseGridMargin.FranchiseId == franchise_id,
+                FranchiseGridMargin.FranchiseAgentId == agent_id,
+                FranchiseGridMargin.InsuranceCompanyId == insurance_company_id,
+                FranchiseGridMargin.PolicyTypeId == policy_type_id,
+                FranchiseGridMargin.isdeleted == 0,
+            )
+        )
+        return (await self.session.execute(stmt)).scalars().first()
 
     async def create_cutnpay_payable(
         self,

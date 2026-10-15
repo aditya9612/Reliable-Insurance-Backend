@@ -615,6 +615,8 @@ class PolicyBookingService:
         insurance_company_id: int = 1,
         policy_type_id: int = 1,
         motor_or_non_motor: str = "MOTOR",
+        franchise_margin: Optional[Decimal] = None,
+        is_franchise_as_agent: bool = False,
     ) -> PolicyCommissionSummary:
         """
         Calculates deterministic multi-bucket (OD, Net/TP, Extra) agent and franchise
@@ -623,15 +625,41 @@ class PolicyBookingService:
         - `adm_PolicyDetails.aspx.cs:L1468` GCV + HDFC ERGO (`InsuranceCompanyId == 2` and `PolicyTypeId > 18`)
           Net-only commission branch (`GAP-P7-001`)
         - `adm_NewEntryForLifeORHelth.aspx.cs` Non-Motor (`NONMOTOR`) 15% default TDS (`GAP-P7-002`)
+        - `adm_FranchiseGridMargin.aspx.cs` / `AgentCommissionRecalculation.aspx.cs:L1869-L1895`
+          Franchise Agent custom margin override deduction (`M_eff = max(0, GrossGrid - Margine)`)
         """
         if motor_or_non_motor == "NONMOTOR" and "tds_percent" not in comm_in.model_fields_set:
             tds_pct = Decimal("15.00")
         else:
             tds_pct = round_2dp(comm_in.tds_percent)
-        od_pct = round_2dp(comm_in.agent_comm_od_percent)
-        net_pct = round_2dp(comm_in.agent_comm_net_percent)
-        extra_pct = round_2dp(comm_in.agent_comm_extra_percent)
+
+        raw_od_pct = round_2dp(comm_in.agent_comm_od_percent)
+        raw_net_pct = round_2dp(comm_in.agent_comm_net_percent)
+        raw_extra_pct = round_2dp(comm_in.agent_comm_extra_percent)
         headline_pct = round_2dp(comm_in.agent_comm_percent)
+
+        # Legacy Franchise Agent Margin Override integration:
+        # If eff_franchise_id > 0 and franchise_margin > 0 and not is_franchise_as_agent:
+        # Franchise retains franchise_margin percentage, sub-agent rate is reduced by margin.
+        if eff_franchise_id > 0 and franchise_margin is not None and franchise_margin > ZERO and not is_franchise_as_agent:
+            f_gross_od = (
+                round_2dp(comm_in.franchise_comm_od_percent)
+                if comm_in.franchise_comm_od_percent is not None
+                else raw_od_pct
+            )
+            od_pct = max(ZERO, round_2dp(f_gross_od - franchise_margin))
+
+            f_gross_net = (
+                round_2dp(comm_in.franchise_comm_net_percent)
+                if comm_in.franchise_comm_net_percent is not None
+                else raw_net_pct
+            )
+            net_pct = max(ZERO, round_2dp(f_gross_net - franchise_margin))
+            extra_pct = raw_extra_pct
+        else:
+            od_pct = raw_od_pct
+            net_pct = raw_net_pct
+            extra_pct = raw_extra_pct
 
         # adm_PolicyDetails.aspx.cs:L1468 parity:
         # For GCV + HDFC ERGO (InsuranceCompanyId == 2 and PolicyTypeId > 18), only Net Commission applies
@@ -715,13 +743,13 @@ class PolicyBookingService:
                 else (
                     round_2dp(comm_in.franchise_comm_od_percent)
                     if comm_in.franchise_comm_od_percent is not None
-                    else od_pct
+                    else raw_od_pct
                 )
             )
             f_net_pct = (
                 round_2dp(comm_in.franchise_comm_net_percent)
                 if comm_in.franchise_comm_net_percent is not None
-                else net_pct
+                else raw_net_pct
             )
             f_extra_pct = (
                 ZERO
@@ -734,14 +762,30 @@ class PolicyBookingService:
             )
             f_od_amt = round_2dp((od_base * f_od_pct) / HUNDRED)
             f_od_tds = round_2dp((f_od_amt * tds_pct) / HUNDRED)
+            f_od_net = round_2dp(f_od_amt - f_od_tds)
             f_net_amt = round_2dp((net_base * f_net_pct) / HUNDRED)
             f_net_tds = round_2dp((f_net_amt * tds_pct) / HUNDRED)
+            f_net_net = round_2dp(f_net_amt - f_net_tds)
             f_ext_amt = round_2dp((extra_base * f_extra_pct) / HUNDRED)
             f_ext_tds = round_2dp((f_ext_amt * tds_pct) / HUNDRED)
+            f_ext_net = round_2dp(f_ext_amt - f_ext_tds)
 
             frn_gross = round_2dp(f_od_amt + f_net_amt + f_ext_amt)
             frn_tds = round_2dp(f_od_tds + f_net_tds + f_ext_tds)
             frn_net = round_2dp(frn_gross - frn_tds)
+        else:
+            f_od_pct = ZERO
+            f_od_amt = ZERO
+            f_od_tds = ZERO
+            f_od_net = ZERO
+            f_net_pct = ZERO
+            f_net_amt = ZERO
+            f_net_tds = ZERO
+            f_net_net = ZERO
+            f_extra_pct = ZERO
+            f_ext_amt = ZERO
+            f_ext_tds = ZERO
+            f_ext_net = ZERO
 
         return PolicyCommissionSummary(
             agent_id=eff_agent_id,
@@ -768,6 +812,18 @@ class PolicyBookingService:
             tds_percent=tds_pct,
             total_tds_amount=total_tds,
             total_net_commission=total_net,
+            franchise_comm_od_percent=f_od_pct,
+            franchise_comm_od_amount=f_od_amt,
+            franchise_tds_od_amount=f_od_tds,
+            franchise_net_od_amount=f_od_net,
+            franchise_comm_net_percent=f_net_pct,
+            franchise_comm_net_amount=f_net_amt,
+            franchise_tds_net_amount=f_net_tds,
+            franchise_net_net_amount=f_net_net,
+            franchise_comm_extra_percent=f_extra_pct,
+            franchise_comm_extra_amount=f_ext_amt,
+            franchise_tds_extra_amount=f_ext_tds,
+            franchise_net_extra_amount=f_ext_net,
             franchise_gross_commission=frn_gross,
             franchise_tds_amount=frn_tds,
             franchise_net_commission=frn_net,
@@ -1001,6 +1057,22 @@ class PolicyBookingService:
             prefill_sales_ex_id=prefill_sales_ex_id,
         )
 
+        # Resolve any custom Franchise Agent Margin Override (Phase 28 / Phase 29 Integration)
+        frn_margin_val: Optional[Decimal] = None
+        is_frn_as_agent: bool = False
+        if eff_frn > 0 and eff_agent > 0:
+            margin_rec = await self.repo.get_franchise_grid_margin(
+                franchise_id=eff_frn,
+                agent_id=eff_agent,
+                insurance_company_id=payload.insurance_company_id,
+                policy_type_id=payload.policy_type_id,
+            )
+            if margin_rec is not None and margin_rec.margin is not None and Decimal(str(margin_rec.margin)) > ZERO:
+                frn_margin_val = Decimal(str(margin_rec.margin))
+                norm_role = _normalize(ctx.role_name)
+                if norm_role == "FRANCHISE" and getattr(ctx, "franchise_id", None) == eff_agent:
+                    is_frn_as_agent = True
+
         comm_summary = self.calculate_commission_summary(
             premium=premium_summary,
             comm_in=payload.commission,
@@ -1011,6 +1083,8 @@ class PolicyBookingService:
             insurance_company_id=payload.insurance_company_id,
             policy_type_id=payload.policy_type_id,
             motor_or_non_motor=payload.motor_or_non_motor,
+            franchise_margin=frn_margin_val,
+            is_franchise_as_agent=is_frn_as_agent,
         )
 
         pay_summary = self.calculate_payment_summary(
@@ -1151,6 +1225,21 @@ class PolicyBookingService:
             prefill_sales_ex_id=prefill_sales_ex_id,
         )
 
+        # Resolve any custom Franchise Agent Margin Override (Phase 28 / Phase 29 Integration)
+        frn_margin_val: Optional[Decimal] = None
+        is_frn_as_agent: bool = False
+        if eff_frn > 0 and eff_agent > 0:
+            margin_rec = await self.repo.get_franchise_grid_margin(
+                franchise_id=eff_frn,
+                agent_id=eff_agent,
+                insurance_company_id=payload.insurance_company_id,
+                policy_type_id=payload.policy_type_id,
+            )
+            if margin_rec is not None and margin_rec.margin is not None and Decimal(str(margin_rec.margin)) > ZERO:
+                frn_margin_val = Decimal(str(margin_rec.margin))
+                if norm_role == "FRANCHISE" and getattr(ctx, "franchise_id", None) == eff_agent:
+                    is_frn_as_agent = True
+
         comm_summary = self.calculate_commission_summary(
             premium=premium_summary,
             comm_in=payload.commission,
@@ -1161,6 +1250,8 @@ class PolicyBookingService:
             insurance_company_id=payload.insurance_company_id,
             policy_type_id=payload.policy_type_id,
             motor_or_non_motor=payload.motor_or_non_motor,
+            franchise_margin=frn_margin_val,
+            is_franchise_as_agent=is_frn_as_agent,
         )
 
         pay_summary = self.calculate_payment_summary(
@@ -1489,18 +1580,18 @@ class PolicyBookingService:
                         FranchiseNetComm=comm_summary.franchise_net_commission,
                         FCommissionPaid=ZERO,
                         isdeleted=0,
-                        Franchisecomm_OD=comm_summary.agent_comm_od_percent,
-                        FranchiseCommAmt_OD=comm_summary.agent_comm_od_amount,
-                        FranchiseTdsAmt_OD=comm_summary.tds_od_amount,
-                        FranchiseNetComm_OD=comm_summary.net_comm_od_amount,
-                        Franchisecomm_Net=comm_summary.agent_comm_net_percent,
-                        FranchiseCommAmt_Net=comm_summary.agent_comm_net_amount,
-                        FranchiseTdsAmt_Net=comm_summary.tds_net_amount,
-                        FranchiseNetComm_Net=comm_summary.net_comm_net_amount,
-                        Franchisecomm_Extra=comm_summary.agent_comm_extra_percent,
-                        FranchiseCommAmt_Extra=comm_summary.agent_comm_extra_amount,
-                        FranchiseTdsAmt_Extra=comm_summary.tds_extra_amount,
-                        FranchiseNetComm_Extra=comm_summary.net_comm_extra_amount,
+                        Franchisecomm_OD=comm_summary.franchise_comm_od_percent,
+                        FranchiseCommAmt_OD=comm_summary.franchise_comm_od_amount,
+                        FranchiseTdsAmt_OD=comm_summary.franchise_tds_od_amount,
+                        FranchiseNetComm_OD=comm_summary.franchise_net_od_amount,
+                        Franchisecomm_Net=comm_summary.franchise_comm_net_percent,
+                        FranchiseCommAmt_Net=comm_summary.franchise_comm_net_amount,
+                        FranchiseTdsAmt_Net=comm_summary.franchise_tds_net_amount,
+                        FranchiseNetComm_Net=comm_summary.franchise_net_net_amount,
+                        Franchisecomm_Extra=comm_summary.franchise_comm_extra_percent,
+                        FranchiseCommAmt_Extra=comm_summary.franchise_comm_extra_amount,
+                        FranchiseTdsAmt_Extra=comm_summary.franchise_tds_extra_amount,
+                        FranchiseNetComm_Extra=comm_summary.franchise_net_extra_amount,
                         ProfitofNetCommision=round_2dp(
                             comm_summary.franchise_net_commission - comm_summary.total_net_commission
                         ),

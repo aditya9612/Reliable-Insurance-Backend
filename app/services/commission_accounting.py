@@ -699,22 +699,64 @@ class CommissionAccountingService:
                     elif tx.FranchiseCode and str(tx.FranchiseCode).strip().isdigit():
                         frn_id_val = int(str(tx.FranchiseCode).strip())
 
+                    # Check custom Franchise Grid Margin Override (Phase 28/29 integration)
+                    frn_margin: Optional[Decimal] = None
+                    if frn_id_val and tx.AgentId and tx.InsuranceCompanyId and tx.PolicyTypeId:
+                        m_rec = await self.repo.get_franchise_grid_margin(
+                            franchise_id=frn_id_val,
+                            agent_id=tx.AgentId,
+                            insurance_company_id=tx.InsuranceCompanyId,
+                            policy_type_id=tx.PolicyTypeId,
+                        )
+                        if m_rec is not None and m_rec.margin is not None and Decimal(str(m_rec.margin)) > ZERO:
+                            frn_margin = Decimal(str(m_rec.margin))
+
+                    raw_frn_od = (
+                        payload.franchise_comm_od_pct
+                        if payload.franchise_comm_od_pct is not None
+                        else (
+                            round_2dp(_to_decimal(fc.Franchisecomm_OD))
+                            if fc is not None and fc.Franchisecomm_OD is not None
+                            else round_2dp(_to_decimal(tx.AgentComm_OD or tx.AgentComm))
+                        )
+                    )
+                    raw_ag_od = (
+                        payload.agent_comm_od_pct
+                        if payload.agent_comm_od_pct is not None
+                        else round_2dp(_to_decimal(tx.AgentComm_OD or tx.AgentComm))
+                    )
+                    if frn_margin is not None and payload.agent_comm_od_pct is None:
+                        eff_ag_od = max(ZERO, round_2dp(raw_frn_od - frn_margin))
+                    else:
+                        eff_ag_od = raw_ag_od
+
+                    raw_frn_net = (
+                        payload.franchise_comm_net_pct
+                        if payload.franchise_comm_net_pct is not None
+                        else (
+                            round_2dp(_to_decimal(fc.Franchisecomm_Net))
+                            if fc is not None and fc.Franchisecomm_Net is not None
+                            else round_2dp(_to_decimal(tx.AgentComm_Net))
+                        )
+                    )
+                    raw_ag_net = (
+                        payload.agent_comm_net_pct
+                        if payload.agent_comm_net_pct is not None
+                        else round_2dp(_to_decimal(tx.AgentComm_Net))
+                    )
+                    if frn_margin is not None and payload.agent_comm_net_pct is None:
+                        eff_ag_net = max(ZERO, round_2dp(raw_frn_net - frn_margin))
+                    else:
+                        eff_ag_net = raw_ag_net
+
                     preview_req = CommissionPreviewRequest(
                         od_premium=round_2dp(_to_decimal(tx.ODPermium)),
                         tp_premium=round_2dp(_to_decimal(tx.TPPermium)),
                         net_premium=round_2dp(_to_decimal(tx.NetPermium)),
                         final_premium=round_2dp(_to_decimal(tx.Amount)),
                         agent_id=tx.AgentId,
-                        agent_comm_od_pct=(
-                            payload.agent_comm_od_pct
-                            if payload.agent_comm_od_pct is not None
-                            else round_2dp(_to_decimal(tx.AgentComm_OD or tx.AgentComm))
-                        ),
-                        agent_comm_net_pct=(
-                            payload.agent_comm_net_pct
-                            if payload.agent_comm_net_pct is not None
-                            else round_2dp(_to_decimal(tx.AgentComm_Net))
-                        ),
+                        agent_comm_od_pct=eff_ag_od,
+                        agent_comm_net_pct=eff_ag_net,
                         agent_comm_extra_pct=(
                             payload.agent_comm_extra_pct
                             if payload.agent_comm_extra_pct is not None
@@ -726,24 +768,8 @@ class CommissionAccountingService:
                             else round_2dp(_to_decimal(tx.tdsPercent or Decimal("5.00")))
                         ),
                         franchise_id=frn_id_val,
-                        franchise_comm_od_pct=(
-                            payload.franchise_comm_od_pct
-                            if payload.franchise_comm_od_pct is not None
-                            else (
-                                round_2dp(_to_decimal(fc.Franchisecomm_OD))
-                                if fc is not None
-                                else ZERO
-                            )
-                        ),
-                        franchise_comm_net_pct=(
-                            payload.franchise_comm_net_pct
-                            if payload.franchise_comm_net_pct is not None
-                            else (
-                                round_2dp(_to_decimal(fc.Franchisecomm_Net))
-                                if fc is not None
-                                else ZERO
-                            )
-                        ),
+                        franchise_comm_od_pct=raw_frn_od,
+                        franchise_comm_net_pct=raw_frn_net,
                         franchise_comm_extra_pct=(
                             payload.franchise_comm_extra_pct
                             if payload.franchise_comm_extra_pct is not None

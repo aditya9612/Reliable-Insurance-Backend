@@ -30,6 +30,7 @@ from app.api.v1.endpoints import (
     phase26,
     phase27,
     phase28,
+    phase29,
 )
 
 api_router = APIRouter()
@@ -312,3 +313,6 @@ api_router.include_router(phase27.bank_remittance_router)
 
 # Mount Phase 28 Franchise Agent Grid Margin Override Engine endpoints
 api_router.include_router(phase28.franchise_margins_router)
+
+# Mount Phase 29 Temporary Operator Role & Workload Delegation Master endpoints
+api_router.include_router(phase29.temporary_operators_router)

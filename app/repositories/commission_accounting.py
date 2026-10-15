@@ -22,6 +22,7 @@ from app.models.commission import (
 )
 from app.models.ledger import LedgerMaster
 from app.models.transaction import Transaction
+from app.models.phase28_features import FranchiseGridMargin
 
 
 ZERO = Decimal("0.00")
@@ -96,6 +97,29 @@ class CommissionAccountingRepository:
             )
         if for_update:
             stmt = stmt.with_for_update().execution_options(populate_existing=True)
+        res = await self.session.execute(stmt)
+        return res.scalars().first()
+
+    async def get_franchise_grid_margin(
+        self,
+        franchise_id: int,
+        agent_id: int,
+        insurance_company_id: int,
+        policy_type_id: int,
+    ) -> Optional[FranchiseGridMargin]:
+        """
+        Retrieves active custom franchise margin override for an agent, company, and policy type.
+        Legacy Parity: sp_franchsieGridMargin (SELECT2).
+        """
+        stmt = select(FranchiseGridMargin).where(
+            and_(
+                FranchiseGridMargin.FranchiseId == franchise_id,
+                FranchiseGridMargin.FranchiseAgentId == agent_id,
+                FranchiseGridMargin.InsuranceCompanyId == insurance_company_id,
+                FranchiseGridMargin.PolicyTypeId == policy_type_id,
+                FranchiseGridMargin.isdeleted == 0,
+            )
+        )
         res = await self.session.execute(stmt)
         return res.scalars().first()
 

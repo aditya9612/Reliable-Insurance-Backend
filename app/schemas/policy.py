@@ -232,6 +232,18 @@ class PolicyCommissionSummary(BaseModel):
 
     # Franchise Commission Ledger Summary (tbl_franchisecommission)
     franchise_comm_id: Optional[int] = None
+    franchise_comm_od_percent: Decimal = Decimal("0.00")
+    franchise_comm_od_amount: Decimal = Decimal("0.00")
+    franchise_tds_od_amount: Decimal = Decimal("0.00")
+    franchise_net_od_amount: Decimal = Decimal("0.00")
+    franchise_comm_net_percent: Decimal = Decimal("0.00")
+    franchise_comm_net_amount: Decimal = Decimal("0.00")
+    franchise_tds_net_amount: Decimal = Decimal("0.00")
+    franchise_net_net_amount: Decimal = Decimal("0.00")
+    franchise_comm_extra_percent: Decimal = Decimal("0.00")
+    franchise_comm_extra_amount: Decimal = Decimal("0.00")
+    franchise_tds_extra_amount: Decimal = Decimal("0.00")
+    franchise_net_extra_amount: Decimal = Decimal("0.00")
     franchise_gross_commission: Decimal = Decimal("0.00")
     franchise_tds_amount: Decimal = Decimal("0.00")
     franchise_net_commission: Decimal = Decimal("0.00")
