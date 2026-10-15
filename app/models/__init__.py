@@ -168,6 +168,9 @@ from app.models.phase26_features import (
 from app.models.phase27_features import (
     BankDebitRemittance,
 )
+from app.models.phase28_features import (
+    FranchiseGridMargin,
+)
 
 
 __all__ = [
@@ -306,4 +309,5 @@ __all__ = [
     "ClaimAssistance",
     "ClaimAssistanceImg",
     "BankDebitRemittance",
+    "FranchiseGridMargin",
 ]
