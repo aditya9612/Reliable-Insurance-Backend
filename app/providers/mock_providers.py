@@ -4,6 +4,7 @@ Guarantees ZERO live external network calls during testing and local development
 """
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
+import logging
 import uuid
 from app.providers.base import (
     VehicleRCProvider,
@@ -13,6 +14,8 @@ from app.providers.base import (
 )
 from app.schemas.integrations import VehicleRCData
 from app.schemas.notifications import SMSResult, PushResult, EmailResult, EmailAttachment
+
+logger = logging.getLogger("reliable.mock_sms")
 
 
 class MockVehicleRCProvider(VehicleRCProvider):
@@ -120,6 +123,7 @@ class MockSMSProvider(SMSProvider):
             "dispatched_at": datetime.utcnow(),
         }
         self.outbox.append(record)
+        logger.info(f"📱 [MOCK SMS DISPATCHED] Mobile: {mobile_number} | Message: {message}")
 
         if mobile_number.startswith("000"):
             return SMSResult(
