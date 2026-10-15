@@ -165,6 +165,9 @@ from app.models.phase26_features import (
     ClaimAssistance,
     ClaimAssistanceImg,
 )
+from app.models.phase27_features import (
+    BankDebitRemittance,
+)
 
 
 __all__ = [
@@ -302,4 +305,5 @@ __all__ = [
     "InvoiceSequence",
     "ClaimAssistance",
     "ClaimAssistanceImg",
+    "BankDebitRemittance",
 ]
