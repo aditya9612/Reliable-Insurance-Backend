@@ -12,6 +12,7 @@ Enforces:
 - GAP-5F-03: Server-side principal context resolution (agent_id, emp_id / employee_id, franchise_id).
 """
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Dict, FrozenSet, Optional
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -741,6 +742,26 @@ def is_quotation_coordinator_role(role_name: Optional[str]) -> bool:
 
 
 
+TEMPORARY_OPERATOR_ADMIN_ROLES: FrozenSet[str] = frozenset({
+    "OWNER",
+    "ADMIN",
+    "IT SUPPORT",
+})
+
+TEMPORARY_OPERATOR_SUPERVISORY_ROLES: FrozenSet[str] = frozenset({
+    "OPERATOR HEAD",
+    "SUPERVISOR",
+    "MANAGER",
+    "HOD",
+})
+
+OPERATOR_ROLES: FrozenSet[str] = frozenset({
+    "OPERATOR",
+    "OPERATOR HEAD",
+    "FRANCHISE OPERATOR",
+})
+
+
 @dataclass
 class PrincipalContext:
     """
@@ -756,6 +777,9 @@ class PrincipalContext:
     emp_id: Optional[int] = None
     employee_id: Optional[int] = None
     franchise_id: Optional[int] = None
+    delegated_from_operator_id: Optional[int] = None
+    effective_operator_id: Optional[int] = None
+    is_acting_as_temporary_operator: bool = False
 
 
 def _parse_positive_int(val: object) -> Optional[int]:
@@ -846,6 +870,32 @@ async def resolve_principal_context(
             if row and row[0]:
                 franchise_id = _parse_positive_int(row[0])
 
+    delegated_from_op_id: Optional[int] = None
+    effective_op_id: Optional[int] = user.UserId
+    is_acting_as_temp_op: bool = False
+
+    # Check if this user is actively delegated to act as temporary operator (Phase 30)
+    if session is not None and user.UserId:
+        now_utc = datetime.utcnow()
+        try:
+            del_res = await session.execute(
+                text(
+                    "SELECT Per_OperatorId FROM tbl_tempararyoperator "
+                    "WHERE Temp_OperatorId = :uid AND isdeleted = 0 "
+                    "AND (ValidFrom IS NULL OR ValidFrom <= :now) "
+                    "AND (ValidUpTo IS NULL OR ValidUpTo >= :now) "
+                    "ORDER BY ID DESC LIMIT 1"
+                ),
+                {"uid": user.UserId, "now": now_utc},
+            )
+            del_row = del_res.first()
+            if del_row and del_row[0]:
+                delegated_from_op_id = int(del_row[0])
+                effective_op_id = delegated_from_op_id
+                is_acting_as_temp_op = True
+        except Exception:
+            pass
+
     context = PrincipalContext(
         user_id=user.UserId,
         username=getattr(user, "UserName", None),
@@ -856,6 +906,9 @@ async def resolve_principal_context(
         emp_id=emp_id,
         employee_id=emp_id,
         franchise_id=franchise_id,
+        delegated_from_operator_id=delegated_from_op_id,
+        effective_operator_id=effective_op_id,
+        is_acting_as_temporary_operator=is_acting_as_temp_op,
     )
 
 
@@ -869,6 +922,9 @@ async def resolve_principal_context(
     setattr(user, "emp_id", context.emp_id)
     setattr(user, "employee_id", context.employee_id)
     setattr(user, "franchise_id", context.franchise_id)
+    setattr(user, "delegated_from_operator_id", context.delegated_from_operator_id)
+    setattr(user, "effective_operator_id", context.effective_operator_id)
+    setattr(user, "is_acting_as_temporary_operator", context.is_acting_as_temporary_operator)
     setattr(user, "principal_context", context)
 
     return context

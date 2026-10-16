@@ -435,3 +435,275 @@ async def test_unauthenticated_request_rejected(
 ):
     res = await async_client.get("/api/v1/temporary-operators")
     assert res.status_code == 401
+
+
+# ==============================================================================
+# 6. PHASE 30 DELEGATION AUTHORIZATION ENFORCEMENT & RBAC TESTS
+# ==============================================================================
+
+@pytest.mark.asyncio
+async def test_delegation_creation_unauthorized_role_rejected(
+    async_client: AsyncClient, db_session: AsyncSession
+):
+    """An agent or non-clerk role cannot create temporary operator delegations (403 Forbidden)."""
+    agent_user, agent_headers = await create_user_with_role(db_session, "AGENT")
+
+    payload = {
+        "per_operator_id": 1001,
+        "temp_operator_id": 1002,
+    }
+
+    res = await async_client.post(
+        "/api/v1/temporary-operators",
+        json=payload,
+        headers=agent_headers,
+    )
+    assert res.status_code == 403, res.text
+    assert "not authorized to manage operator delegations" in res.text
+
+
+@pytest.mark.asyncio
+async def test_delegation_creation_cross_branch_supervisor_rejected(
+    async_client: AsyncClient, db_session: AsyncSession
+):
+    """A supervisory user in Branch 10 cannot delegate operators belonging to Branch 20 (403 Forbidden)."""
+    # Create supervisor in Branch 10
+    sup_user, sup_headers = await create_user_with_role(db_session, "SUPERVISOR")
+    sup_user.BranchId = 10
+    await db_session.commit()
+
+    # Create operator in Branch 20
+    op20_user, _ = await create_user_with_role(db_session, "OPERATOR")
+    op20_user.BranchId = 20
+    await db_session.commit()
+
+    payload = {
+        "per_operator_id": op20_user.UserId,
+        "temp_operator_id": 1005,
+    }
+
+    res = await async_client.post(
+        "/api/v1/temporary-operators",
+        json=payload,
+        headers=sup_headers,
+    )
+    assert res.status_code == 403, res.text
+    assert "Supervisory users can only manage operator delegations for their own branch" in res.text
+
+
+@pytest.mark.asyncio
+async def test_operator_delegating_other_workload_rejected(
+    async_client: AsyncClient, db_session: AsyncSession
+):
+    """An operator cannot delegate another operator's workload (403 Forbidden)."""
+    op1, op1_headers = await create_user_with_role(db_session, "OPERATOR")
+    op2, _ = await create_user_with_role(db_session, "OPERATOR")
+
+    payload = {
+        "per_operator_id": op2.UserId,  # op1 tries to delegate op2's workload
+        "temp_operator_id": 1099,
+    }
+
+    res = await async_client.post(
+        "/api/v1/temporary-operators",
+        json=payload,
+        headers=op1_headers,
+    )
+    assert res.status_code == 403, res.text
+    assert "Operators are only permitted to delegate their own workload" in res.text
+
+
+@pytest.mark.asyncio
+async def test_operator_delegating_own_workload_success(
+    async_client: AsyncClient, db_session: AsyncSession
+):
+    """An operator delegating their own workload to another operator in the same branch succeeds (201 Created)."""
+    op1, op1_headers = await create_user_with_role(db_session, "OPERATOR")
+    op2, _ = await create_user_with_role(db_session, "OPERATOR")
+    op1.BranchId = 5
+    op2.BranchId = 5
+    await db_session.commit()
+
+    now = datetime.utcnow()
+    payload = {
+        "per_operator_id": op1.UserId,
+        "temp_operator_id": op2.UserId,
+        "valid_from": now.isoformat(),
+        "valid_up_to": (now + timedelta(days=2)).isoformat(),
+    }
+
+    res = await async_client.post(
+        "/api/v1/temporary-operators",
+        json=payload,
+        headers=op1_headers,
+    )
+    assert res.status_code == 201, res.text
+    assert res.json()["per_operator_id"] == op1.UserId
+    assert res.json()["temp_operator_id"] == op2.UserId
+
+
+@pytest.mark.asyncio
+async def test_delegation_non_operator_role_rejected(
+    async_client: AsyncClient, db_session: AsyncSession
+):
+    """Assigning a user who has a non-operator role (e.g. AGENT) as an operator delegate is rejected (400 Bad Request)."""
+    admin_user, admin_headers = await create_user_with_role(db_session, "ADMIN")
+    agent_user, _ = await create_user_with_role(db_session, "AGENT")
+    op_user, _ = await create_user_with_role(db_session, "OPERATOR")
+
+    payload = {
+        "per_operator_id": op_user.UserId,
+        "temp_operator_id": agent_user.UserId,  # Not an operator
+    }
+
+    res = await async_client.post(
+        "/api/v1/temporary-operators",
+        json=payload,
+        headers=admin_headers,
+    )
+    assert res.status_code == 400, res.text
+    assert "does not have an OPERATOR role" in res.text
+
+
+@pytest.mark.asyncio
+async def test_anti_circular_and_anti_chaining_delegation_rejected(
+    async_client: AsyncClient, db_session: AsyncSession
+):
+    """Circular delegation (A->B then B->A) and chained delegation (A->B then B->C) are prohibited (400 Bad Request)."""
+    admin_user, admin_headers = await create_user_with_role(db_session, "ADMIN")
+    op_a, _ = await create_user_with_role(db_session, "OPERATOR")
+    op_b, _ = await create_user_with_role(db_session, "OPERATOR")
+    op_c, _ = await create_user_with_role(db_session, "OPERATOR")
+
+    now = datetime.utcnow()
+    # 1. A delegates to B
+    res1 = await async_client.post(
+        "/api/v1/temporary-operators",
+        json={
+            "per_operator_id": op_a.UserId,
+            "temp_operator_id": op_b.UserId,
+            "valid_from": now.isoformat(),
+            "valid_up_to": (now + timedelta(days=5)).isoformat(),
+        },
+        headers=admin_headers,
+    )
+    assert res1.status_code == 201
+
+    # 2. B attempts to delegate back to A (Circular) -> 400 Bad Request
+    res_circ = await async_client.post(
+        "/api/v1/temporary-operators",
+        json={
+            "per_operator_id": op_b.UserId,
+            "temp_operator_id": op_a.UserId,
+            "valid_from": now.isoformat(),
+            "valid_up_to": (now + timedelta(days=5)).isoformat(),
+        },
+        headers=admin_headers,
+    )
+    assert res_circ.status_code == 400, res_circ.text
+    assert "Circular delegation prohibited" in res_circ.text
+
+    # 3. B attempts to delegate away their own duties to C (Chaining) -> 400 Bad Request
+    res_chain = await async_client.post(
+        "/api/v1/temporary-operators",
+        json={
+            "per_operator_id": op_b.UserId,
+            "temp_operator_id": op_c.UserId,
+            "valid_from": now.isoformat(),
+            "valid_up_to": (now + timedelta(days=5)).isoformat(),
+        },
+        headers=admin_headers,
+    )
+    assert res_chain.status_code == 409 or res_chain.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_cross_branch_update_and_revoke_rejected(
+    async_client: AsyncClient, db_session: AsyncSession
+):
+    """A supervisor from Branch 10 cannot update or revoke a delegation created in Branch 20 (403 Forbidden)."""
+    admin_user, admin_headers = await create_user_with_role(db_session, "ADMIN")
+    sup10_user, sup10_headers = await create_user_with_role(db_session, "SUPERVISOR")
+    sup10_user.BranchId = 10
+
+    op20_a, _ = await create_user_with_role(db_session, "OPERATOR")
+    op20_a.BranchId = 20
+    op20_b, _ = await create_user_with_role(db_session, "OPERATOR")
+    op20_b.BranchId = 20
+    await db_session.commit()
+
+    # Create delegation in Branch 20
+    res_create = await async_client.post(
+        "/api/v1/temporary-operators",
+        json={
+            "per_operator_id": op20_a.UserId,
+            "temp_operator_id": op20_b.UserId,
+        },
+        headers=admin_headers,
+    )
+    assert res_create.status_code == 201
+    delegation_id = res_create.json()["id"]
+
+    # Supervisor from Branch 10 attempts to update -> 403 Forbidden
+    res_update = await async_client.put(
+        f"/api/v1/temporary-operators/{delegation_id}",
+        json={"valid_up_to": (datetime.utcnow() + timedelta(days=10)).isoformat()},
+        headers=sup10_headers,
+    )
+    assert res_update.status_code == 403, res_update.text
+
+    # Supervisor from Branch 10 attempts to revoke -> 403 Forbidden
+    res_revoke = await async_client.delete(
+        f"/api/v1/temporary-operators/{delegation_id}",
+        headers=sup10_headers,
+    )
+    assert res_revoke.status_code == 403, res_revoke.text
+
+
+@pytest.mark.asyncio
+async def test_principal_context_delegation_resolution(
+    async_client: AsyncClient, db_session: AsyncSession
+):
+    """When an operator with an active delegation authenticates, resolve_principal_context sets acting temporary operator attributes."""
+    from app.core.rbac import resolve_principal_context
+    from app.models.user import UserRole
+    admin_user, admin_headers = await create_user_with_role(db_session, "ADMIN")
+    op_per, _ = await create_user_with_role(db_session, "OPERATOR")
+    op_temp, _ = await create_user_with_role(db_session, "OPERATOR")
+
+    now = datetime.utcnow()
+    res = await async_client.post(
+        "/api/v1/temporary-operators",
+        json={
+            "per_operator_id": op_per.UserId,
+            "temp_operator_id": op_temp.UserId,
+            "valid_from": (now - timedelta(hours=1)).isoformat(),
+            "valid_up_to": (now + timedelta(days=2)).isoformat(),
+        },
+        headers=admin_headers,
+    )
+    assert res.status_code == 201
+    delegation_id = res.json()["id"]
+
+    # Refresh session snapshot to see committed rows from async_client
+    await db_session.commit()
+
+    # Resolve principal context for op_temp
+    role_obj = (await db_session.execute(select(UserRole).where(UserRole.UserRoleId == op_temp.UserRoleId))).scalar_one_or_none()
+    ctx = await resolve_principal_context(db_session, op_temp, role_obj)
+    assert ctx.is_acting_as_temporary_operator is True
+    assert ctx.delegated_from_operator_id == op_per.UserId
+    assert ctx.effective_operator_id == op_per.UserId
+
+    # When delegation is revoked
+    del_res = await async_client.delete(f"/api/v1/temporary-operators/{delegation_id}", headers=admin_headers)
+    assert del_res.status_code == 200
+
+    # Refresh session snapshot after revocation
+    await db_session.commit()
+
+    # Re-resolve principal context
+    ctx2 = await resolve_principal_context(db_session, op_temp, role_obj)
+    assert ctx2.is_acting_as_temporary_operator is False
+    assert ctx2.delegated_from_operator_id is None
+    assert ctx2.effective_operator_id == op_temp.UserId

@@ -602,9 +602,12 @@ async def test_end_to_end_policy_booking_with_franchise_margin(
     assert fc_record is not None
     assert fc_record.FranchiseId == franchise_id
     assert fc_record.AgentId == agent_id
+    assert Decimal(str(fc_record.Franchisecomm)) == Decimal("15.00")
+    assert Decimal(str(fc_record.Franchisecomm_OD)) == Decimal("15.00")
     assert Decimal(str(fc_record.FranchiseCommAmt_OD)) == Decimal("1500.00")
-    # Profit of Net Commission should reflect franchise spread (1425 - 1092.50 = 332.50 net)
-    assert Decimal(str(fc_record.ProfitofNetCommision)) > Decimal("0.00")
+    assert Decimal(str(fc_record.FranchiseNetComm)) == Decimal("1425.00")
+    # Profit of Net Commission reflects exact franchise spread: 1425.00 (franchise net) - 1092.50 (agent net) = 332.50
+    assert Decimal(str(fc_record.ProfitofNetCommision)) == Decimal("332.50")
 
 
 @pytest.mark.asyncio

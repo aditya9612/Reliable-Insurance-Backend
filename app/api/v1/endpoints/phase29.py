@@ -58,6 +58,7 @@ async def list_delegations(
 ) -> TemporaryOperatorListResponse:
     service = TemporaryOperatorService(db)
     return await service.list_delegations(
+        principal=principal,
         per_operator_id=per_operator_id,
         temp_operator_id=temp_operator_id,
         active_only=active_only,
@@ -78,7 +79,7 @@ async def list_eligible_operators(
     principal: PrincipalContext = Depends(get_current_principal),
 ) -> List[EligibleOperatorResponse]:
     service = TemporaryOperatorService(db)
-    return await service.list_eligible_operators()
+    return await service.list_eligible_operators(principal=principal)
 
 
 @temporary_operators_router.get(
@@ -95,7 +96,7 @@ async def resolve_effective_operator(
     principal: PrincipalContext = Depends(get_current_principal),
 ) -> EffectiveOperatorResponse:
     service = TemporaryOperatorService(db)
-    return await service.resolve_effective_operator(operator_id=operator_id, as_of=as_of)
+    return await service.resolve_effective_operator(operator_id=operator_id, principal=principal, as_of=as_of)
 
 
 @temporary_operators_router.get(
@@ -111,7 +112,7 @@ async def get_delegation(
     principal: PrincipalContext = Depends(get_current_principal),
 ) -> TemporaryOperatorResponse:
     service = TemporaryOperatorService(db)
-    return await service.get_delegation_by_id(delegation_id)
+    return await service.get_delegation_by_id(delegation_id=delegation_id, principal=principal)
 
 
 @temporary_operators_router.put(

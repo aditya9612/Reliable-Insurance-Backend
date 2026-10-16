@@ -773,6 +773,7 @@ class PolicyBookingService:
             frn_gross = round_2dp(f_od_amt + f_net_amt + f_ext_amt)
             frn_tds = round_2dp(f_od_tds + f_net_tds + f_ext_tds)
             frn_net = round_2dp(frn_gross - frn_tds)
+            f_headline_pct = round_2dp(f_od_pct + f_net_pct + f_extra_pct)
         else:
             f_od_pct = ZERO
             f_od_amt = ZERO
@@ -786,6 +787,7 @@ class PolicyBookingService:
             f_ext_amt = ZERO
             f_ext_tds = ZERO
             f_ext_net = ZERO
+            f_headline_pct = ZERO
 
         return PolicyCommissionSummary(
             agent_id=eff_agent_id,
@@ -812,6 +814,7 @@ class PolicyBookingService:
             tds_percent=tds_pct,
             total_tds_amount=total_tds,
             total_net_commission=total_net,
+            franchise_comm_percent=f_headline_pct,
             franchise_comm_od_percent=f_od_pct,
             franchise_comm_od_amount=f_od_amt,
             franchise_tds_od_amount=f_od_tds,
@@ -1574,7 +1577,7 @@ class PolicyBookingService:
                         FranchiseId=comm_summary.franchise_id,
                         AgentId=comm_summary.agent_id,
                         tat=ZERO,
-                        Franchisecomm=comm_summary.headline_agent_comm_percent,
+                        Franchisecomm=comm_summary.franchise_comm_percent or comm_summary.headline_agent_comm_percent,
                         FranchiseCommAmt=comm_summary.franchise_gross_commission,
                         FranchiseTdsAmt=comm_summary.franchise_tds_amount,
                         FranchiseNetComm=comm_summary.franchise_net_commission,
