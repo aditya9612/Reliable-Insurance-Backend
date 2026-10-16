@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.core.dependencies import get_current_principal
 from app.core.rbac import PrincipalContext
-from app.services.phase28_service import FranchiseGridMarginService
-from app.schemas.phase28 import (
+from app.services.franchise_margin_service import FranchiseGridMarginService
+from app.schemas.franchise_margin import (
     FranchiseGridMarginCreate,
     FranchiseGridMarginBatchCreate,
     FranchiseGridMarginUpdate,

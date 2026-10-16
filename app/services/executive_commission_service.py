@@ -10,7 +10,7 @@ from sqlalchemy import select, and_, or_, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.phase22_features import (
+from app.models.executive_commission import (
     SalesExecutiveCommission,
     LocationHeadCommission,
     LocationHeadSalesExMap,
@@ -18,7 +18,7 @@ from app.models.phase22_features import (
     AppBillingDetails,
     AppBillingAttachment,
 )
-from app.schemas.phase22 import (
+from app.schemas.executive_commission import (
     SalesExecutiveCommissionCreate,
     SalesExecutiveCommissionUpdate,
     SalesExecutiveCommissionLookupRequest,
@@ -38,7 +38,7 @@ from app.schemas.phase22 import (
 )
 
 
-class Phase22Service:
+class ExecutiveCommissionService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
@@ -869,3 +869,7 @@ class Phase22Service:
         await self.db.refresh(claim)
 
         return await self.get_billing_claim_details(billing_id)
+
+
+# Backward-compatibility alias
+Phase22Service = ExecutiveCommissionService

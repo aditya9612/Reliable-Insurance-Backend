@@ -37,7 +37,7 @@ from app.core.rbac import (
 from app.models.account import Account
 from app.models.commission import AgentCommissionPayment
 from app.models.document import DocumentRecord, PolicyParserWebhookRecord
-from app.models.phase18a_features import (
+from app.models.operations_parity import (
     IdealPaymentReceipt,
     CommissionRateGrid,
     RemainingPendingCash,
@@ -55,7 +55,7 @@ from app.models.transaction_app import TransactionAppNew
 from app.models.user import User
 from app.providers import get_email_provider
 from app.schemas.notifications import EmailAttachment
-from app.schemas.phase18a import (
+from app.schemas.operations_parity import (
     PolicyExtractionUploadResponse,
     PolicyExtractionPrefillResponse,
     PolicyExtractionLinkTransactionResponse,
@@ -146,7 +146,7 @@ def _q2(val: Decimal | float | int | str | None) -> Decimal:
     return Decimal(str(val)).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
 
 
-class Phase18AService:
+class OperationsParityService:
     """Unified domain service for Phase 18A remaining legacy features."""
 
     def __init__(self, db: AsyncSession):
@@ -2421,3 +2421,7 @@ class Phase18AService:
             branch_id=a.BranchId,
             narration=a.Narration,
         )
+
+
+# Backward-compatibility alias
+Phase18AService = OperationsParityService

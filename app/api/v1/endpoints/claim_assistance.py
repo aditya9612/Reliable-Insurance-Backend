@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.core.dependencies import get_current_principal, require_roles
 from app.core.rbac import PrincipalContext
-from app.services.phase26_service import Phase26Service
-from app.schemas.phase26 import (
+from app.services.claim_assistance_service import ClaimAssistanceService, Phase26Service
+from app.schemas.claim_assistance import (
     ClaimAssistanceCreate,
     ClaimAssistanceUpdate,
     ClaimAssistanceAssignClaimNo,
@@ -35,7 +35,7 @@ async def create_claim_assistance(
     db: AsyncSession = Depends(get_db),
     principal: PrincipalContext = Depends(get_current_principal),
 ) -> ClaimAssistanceResponse:
-    service = Phase26Service(db)
+    service = ClaimAssistanceService(db)
     return await service.create_claim_assistance(payload, principal=principal)
 
 
@@ -50,7 +50,7 @@ async def get_claim_assistance_summary(
     db: AsyncSession = Depends(get_db),
     principal: PrincipalContext = Depends(get_current_principal),
 ) -> ClaimAssistanceSummaryResponse:
-    service = Phase26Service(db)
+    service = ClaimAssistanceService(db)
     return await service.get_summary_metrics(branch_id=branch_id, principal=principal)
 
 
@@ -71,7 +71,7 @@ async def list_claim_assistance(
     db: AsyncSession = Depends(get_db),
     principal: PrincipalContext = Depends(get_current_principal),
 ) -> List[ClaimAssistanceResponse]:
-    service = Phase26Service(db)
+    service = ClaimAssistanceService(db)
     return await service.list_claim_assistance(
         skip=skip,
         limit=limit,
@@ -95,7 +95,7 @@ async def get_claim_assistance(
     db: AsyncSession = Depends(get_db),
     principal: PrincipalContext = Depends(get_current_principal),
 ) -> ClaimAssistanceResponse:
-    service = Phase26Service(db)
+    service = ClaimAssistanceService(db)
     return await service.get_claim_assistance(assistance_id, principal=principal)
 
 
@@ -112,7 +112,7 @@ async def update_claim_assistance(
     db: AsyncSession = Depends(get_db),
     principal: PrincipalContext = Depends(get_current_principal),
 ) -> ClaimAssistanceResponse:
-    service = Phase26Service(db)
+    service = ClaimAssistanceService(db)
     return await service.update_claim_assistance(assistance_id, payload, principal=principal)
 
 
@@ -129,7 +129,7 @@ async def assign_claim_number(
     db: AsyncSession = Depends(get_db),
     principal: PrincipalContext = Depends(get_current_principal),
 ) -> ClaimAssistanceResponse:
-    service = Phase26Service(db)
+    service = ClaimAssistanceService(db)
     return await service.assign_claim_number(assistance_id, payload, principal=principal)
 
 
@@ -146,7 +146,7 @@ async def update_read_status(
     db: AsyncSession = Depends(get_db),
     principal: PrincipalContext = Depends(get_current_principal),
 ) -> ClaimAssistanceResponse:
-    service = Phase26Service(db)
+    service = ClaimAssistanceService(db)
     return await service.update_read_status(assistance_id, payload, principal=principal)
 
 
@@ -162,5 +162,5 @@ async def delete_claim_assistance(
     db: AsyncSession = Depends(get_db),
     principal: PrincipalContext = Depends(get_current_principal),
 ) -> Dict[str, Any]:
-    service = Phase26Service(db)
+    service = ClaimAssistanceService(db)
     return await service.delete_claim_assistance(assistance_id, principal=principal)

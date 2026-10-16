@@ -12,7 +12,7 @@ from sqlalchemy import text, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.integration.test_phase7_policy_booking_api import create_user_with_role
-from app.models.phase29_features import TemporaryOperator
+from app.models.temporary_operator import TemporaryOperator
 
 
 @pytest.fixture(autouse=True)

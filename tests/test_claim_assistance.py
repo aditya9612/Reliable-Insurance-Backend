@@ -10,7 +10,7 @@ from sqlalchemy import text, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.integration.test_phase7_policy_booking_api import create_user_with_role
-from app.models.phase26_features import ClaimAssistance, ClaimAssistanceImg
+from app.models.claim_assistance import ClaimAssistance, ClaimAssistanceImg
 from app.models.master import InsuranceCompany
 from app.models.notification import SMSLog, MessageMaster, MessageDetail
 

@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.core.dependencies import get_current_principal
 from app.core.rbac import PrincipalContext
-from app.services.phase27_service import BankDebitRemittanceService
-from app.schemas.phase27 import (
+from app.services.bank_remittance_service import BankDebitRemittanceService
+from app.schemas.bank_remittance import (
     CompanyRemittanceBatchRequest,
     CashToBankDepositRequest,
     DebitRemittanceResponse,

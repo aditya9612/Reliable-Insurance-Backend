@@ -12,7 +12,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.phase29_features import TemporaryOperator
+from app.models.temporary_operator import TemporaryOperator
 from app.models.profile import Employee
 from app.models.user import User, UserRole
 from app.core.rbac import (
@@ -22,7 +22,7 @@ from app.core.rbac import (
     TEMPORARY_OPERATOR_SUPERVISORY_ROLES,
     OPERATOR_ROLES,
 )
-from app.schemas.phase29 import (
+from app.schemas.temporary_operator import (
     TemporaryOperatorCreate,
     TemporaryOperatorUpdate,
     TemporaryOperatorResponse,

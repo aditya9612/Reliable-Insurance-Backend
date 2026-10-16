@@ -22,7 +22,7 @@ from app.models.commission import (
 )
 from app.models.ledger import LedgerMaster
 from app.models.transaction import Transaction
-from app.models.phase28_features import FranchiseGridMargin
+from app.models.franchise_margin import FranchiseGridMargin
 
 
 ZERO = Decimal("0.00")
@@ -394,7 +394,7 @@ class CommissionAccountingRepository:
         database-backed `tbl_invoicesequence` row 'ACCOUNT_DOC_NO' with pessimistic row locking
         (SELECT ... FOR UPDATE).
         """
-        from app.models.phase25_features import InvoiceSequence
+        from app.models.corporate_client import InvoiceSequence
 
         dialect_name = self.session.bind.dialect.name if self.session.bind else "mysql"
         now_dt = datetime.utcnow()

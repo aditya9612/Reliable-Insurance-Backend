@@ -15,8 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.core.dependencies import get_current_user, require_roles
 from app.models.user import User
-from app.services.phase21_nonmotor_service import NonMotorService
-from app.schemas.phase21_nonmotor import (
+from app.services.nonmotor_service import NonMotorService
+from app.schemas.nonmotor import (
     NonMotorClassCreate,
     NonMotorClassUpdate,
     NonMotorClassResponse,

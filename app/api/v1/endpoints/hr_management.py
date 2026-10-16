@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.core.dependencies import get_current_user, require_roles
 from app.models.user import User
-from app.services.phase23_service import Phase23Service
-from app.schemas.phase23 import (
+from app.services.hr_management_service import HRManagementService, Phase23Service
+from app.schemas.hr_management import (
     HROrganizationCreate,
     HROrganizationUpdate,
     HROrganizationResponse,
@@ -83,7 +83,7 @@ async def create_organization(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.create_organization(data, current_username=current_user.UserName)
 
 
@@ -100,7 +100,7 @@ async def list_organizations(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.list_organizations(query=query, is_active=is_active, skip=skip, limit=limit)
 
 
@@ -114,7 +114,7 @@ async def get_organization(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.get_organization(org_id)
 
 
@@ -129,7 +129,7 @@ async def update_organization(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.update_organization(org_id, data, current_username=current_user.UserName)
 
 
@@ -143,7 +143,7 @@ async def delete_organization(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.delete_organization(org_id, soft=soft)
 
 
@@ -162,7 +162,7 @@ async def create_department(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.create_department(data, current_username=current_user.UserName)
 
 
@@ -180,7 +180,7 @@ async def list_departments(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.list_departments(
         org_id=org_id, query=query, is_active=is_active, skip=skip, limit=limit
     )
@@ -197,7 +197,7 @@ async def list_departments_org_wise(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.list_departments(org_id=org_id, is_active=is_active)
 
 
@@ -211,7 +211,7 @@ async def get_department(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.get_department(dept_id)
 
 
@@ -226,7 +226,7 @@ async def update_department(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.update_department(dept_id, data, current_username=current_user.UserName)
 
 
@@ -240,7 +240,7 @@ async def delete_department(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.delete_department(dept_id, soft=soft)
 
 
@@ -259,7 +259,7 @@ async def create_designation(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.create_designation(data, current_username=current_user.UserName)
 
 
@@ -275,7 +275,7 @@ async def list_designations(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.list_designations(is_active=is_active, skip=skip, limit=limit)
 
 
@@ -289,7 +289,7 @@ async def get_designation(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.get_designation(desg_id)
 
 
@@ -304,7 +304,7 @@ async def update_designation(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.update_designation(desg_id, data, current_username=current_user.UserName)
 
 
@@ -317,7 +317,7 @@ async def delete_designation(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.delete_designation(desg_id)
 
 
@@ -336,7 +336,7 @@ async def create_facility(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.create_facility(data, current_username=current_user.UserName)
 
 
@@ -352,7 +352,7 @@ async def list_facilities(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.list_facilities(is_active=is_active, skip=skip, limit=limit)
 
 
@@ -366,7 +366,7 @@ async def get_facility(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.get_facility(faci_id)
 
 
@@ -381,7 +381,7 @@ async def update_facility(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.update_facility(faci_id, data, current_username=current_user.UserName)
 
 
@@ -394,7 +394,7 @@ async def delete_facility(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.delete_facility(faci_id)
 
 
@@ -413,7 +413,7 @@ async def create_holiday(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.create_holiday(data, current_username=current_user.UserName)
 
 
@@ -432,7 +432,7 @@ async def list_holidays(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.list_holidays(
         year=year,
         month=month,
@@ -453,7 +453,7 @@ async def get_holiday(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.get_holiday(holiday_id)
 
 
@@ -468,7 +468,7 @@ async def update_holiday(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.update_holiday(holiday_id, data, current_username=current_user.UserName)
 
 
@@ -481,7 +481,7 @@ async def delete_holiday(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.delete_holiday(holiday_id)
 
 
@@ -500,7 +500,7 @@ async def create_leave_type(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.create_leave_type(data, current_username=current_user.UserName)
 
 
@@ -516,7 +516,7 @@ async def list_leave_types(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.list_leave_types(is_active=is_active, skip=skip, limit=limit)
 
 
@@ -530,7 +530,7 @@ async def get_leave_type(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.get_leave_type(leave_type_id)
 
 
@@ -545,7 +545,7 @@ async def update_leave_type(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.update_leave_type(leave_type_id, data, current_username=current_user.UserName)
 
 
@@ -558,7 +558,7 @@ async def delete_leave_type(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.delete_leave_type(leave_type_id)
 
 
@@ -577,7 +577,7 @@ async def apply_leave(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.apply_leave(data, current_username=current_user.UserName)
 
 
@@ -593,7 +593,7 @@ async def get_leave_summary(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.get_leave_summary(emp_id=emp_id, org_id=org_id, year=year)
 
 
@@ -607,7 +607,7 @@ async def get_manager_pending_count(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.get_manager_pending_count(reporting_id=reporting_id)
 
 
@@ -631,7 +631,7 @@ async def list_leaves(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.list_leaves(
         emp_id=emp_id,
         reporting_id=reporting_id,
@@ -657,7 +657,7 @@ async def get_leave(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.get_leave(leave_id)
 
 
@@ -672,7 +672,7 @@ async def update_leave(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.update_leave(leave_id, data, current_username=current_user.UserName)
 
 
@@ -687,7 +687,7 @@ async def update_leave_status(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.update_leave_status(leave_id, req, current_username=current_user.UserName)
 
 
@@ -706,7 +706,7 @@ async def create_contact_person(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.create_contact_person(data, current_username=current_user.UserName)
 
 
@@ -723,7 +723,7 @@ async def list_contact_persons(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.list_contact_persons(
         query=query, is_active=is_active, skip=skip, limit=limit
     )
@@ -739,7 +739,7 @@ async def get_contact_person(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.get_contact_person(contact_id)
 
 
@@ -754,7 +754,7 @@ async def update_contact_person(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.update_contact_person(contact_id, data, current_username=current_user.UserName)
 
 
@@ -767,5 +767,5 @@ async def delete_contact_person(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase23Service(db)
+    service = HRManagementService(db)
     return await service.delete_contact_person(contact_id)

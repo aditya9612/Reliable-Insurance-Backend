@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.core.dependencies import get_current_user, require_roles
 from app.models.user import User
-from app.services.phase24_service import Phase24Service
-from app.schemas.phase24 import (
+from app.services.hr_payroll_service import HRPayrollService, Phase24Service
+from app.schemas.hr_payroll import (
     HRWorkingHistoryCreate,
     HRWorkingHistoryUpdate,
     HRWorkingHistoryResponse,
@@ -76,7 +76,7 @@ async def create_working_history(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.create_working_history(data, current_username=current_user.UserName)
 
 
@@ -93,7 +93,7 @@ async def list_working_history(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.list_working_history(
         employee_id=employee_id, is_active=is_active, skip=skip, limit=limit
     )
@@ -109,7 +109,7 @@ async def get_working_history(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.get_working_history(history_id)
 
 
@@ -124,7 +124,7 @@ async def update_working_history(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.update_working_history(history_id, data, current_username=current_user.UserName)
 
 
@@ -137,7 +137,7 @@ async def delete_working_history(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.delete_working_history(history_id)
 
 
@@ -156,7 +156,7 @@ async def create_family_detail(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.create_family_detail(data, current_username=current_user.UserName)
 
 
@@ -173,7 +173,7 @@ async def list_family_details(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.list_family_details(
         employee_id=employee_id, is_active=is_active, skip=skip, limit=limit
     )
@@ -189,7 +189,7 @@ async def get_family_detail(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.get_family_detail(family_id)
 
 
@@ -204,7 +204,7 @@ async def update_family_detail(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.update_family_detail(family_id, data, current_username=current_user.UserName)
 
 
@@ -217,7 +217,7 @@ async def delete_family_detail(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.delete_family_detail(family_id)
 
 
@@ -236,7 +236,7 @@ async def create_reference_detail(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.create_reference_detail(data, current_username=current_user.UserName)
 
 
@@ -253,7 +253,7 @@ async def list_reference_details(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.list_reference_details(
         employee_id=employee_id, is_active=is_active, skip=skip, limit=limit
     )
@@ -269,7 +269,7 @@ async def get_reference_detail(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.get_reference_detail(ref_id)
 
 
@@ -284,7 +284,7 @@ async def update_reference_detail(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.update_reference_detail(ref_id, data, current_username=current_user.UserName)
 
 
@@ -297,7 +297,7 @@ async def delete_reference_detail(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.delete_reference_detail(ref_id)
 
 
@@ -316,7 +316,7 @@ async def create_or_update_working_time(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.create_or_update_working_time(data, current_username=current_user.UserName)
 
 
@@ -330,7 +330,7 @@ async def get_working_time_by_employee(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.get_working_time_by_employee(employee_id)
 
 
@@ -347,7 +347,7 @@ async def list_working_times(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.list_working_times(
         department_id=department_id, is_active=is_active, skip=skip, limit=limit
     )
@@ -363,7 +363,7 @@ async def get_working_time(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.get_working_time(timeinfo_id)
 
 
@@ -382,7 +382,7 @@ async def create_salary_structure(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.create_salary_structure(data, current_username=current_user.UserName)
 
 
@@ -399,7 +399,7 @@ async def list_salary_structures(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.list_salary_structures(org_id=org_id, is_active=is_active, skip=skip, limit=limit)
 
 
@@ -413,7 +413,7 @@ async def get_salary_structure(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.get_salary_structure(struct_id)
 
 
@@ -428,7 +428,7 @@ async def update_salary_structure(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.update_salary_structure(struct_id, data, current_username=current_user.UserName)
 
 
@@ -441,7 +441,7 @@ async def delete_salary_structure(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.delete_salary_structure(struct_id)
 
 
@@ -460,7 +460,7 @@ async def create_advance(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.create_advance(data, current_username=current_user.UserName)
 
 
@@ -478,7 +478,7 @@ async def list_advances(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.list_advances(emp_id=emp_id, org_id=org_id, is_active=is_active, skip=skip, limit=limit)
 
 
@@ -492,7 +492,7 @@ async def get_advance(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.get_advance(adv_id)
 
 
@@ -507,7 +507,7 @@ async def record_advance_recovery(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.record_advance_recovery(adv_id, req, current_username=current_user.UserName)
 
 
@@ -522,7 +522,7 @@ async def update_advance(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.update_advance(adv_id, data, current_username=current_user.UserName)
 
 
@@ -535,7 +535,7 @@ async def delete_advance(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.delete_advance(adv_id)
 
 
@@ -554,7 +554,7 @@ async def create_or_update_monthly_working(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.create_or_update_monthly_working(data, current_username=current_user.UserName)
 
 
@@ -570,7 +570,7 @@ async def get_monthly_summary_report(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.get_monthly_summary_report(org_id=org_id, year=year, month=month)
 
 
@@ -591,7 +591,7 @@ async def list_monthly_working(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.list_monthly_working(
         emp_id=emp_id,
         org_id=org_id,
@@ -614,7 +614,7 @@ async def get_monthly_working(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ALL_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.get_monthly_working(working_id)
 
 
@@ -627,5 +627,5 @@ async def delete_monthly_working(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*HR_ADMIN_ROLES)),
 ):
-    service = Phase24Service(db)
+    service = HRPayrollService(db)
     return await service.delete_monthly_working(working_id)

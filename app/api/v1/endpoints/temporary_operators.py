@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.core.dependencies import get_current_principal
 from app.core.rbac import PrincipalContext
-from app.services.phase29_service import TemporaryOperatorService
-from app.schemas.phase29 import (
+from app.services.temporary_operator_service import TemporaryOperatorService
+from app.schemas.temporary_operator import (
     TemporaryOperatorCreate,
     TemporaryOperatorUpdate,
     TemporaryOperatorResponse,

@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.core.dependencies import get_current_user, require_roles
 from app.models.user import User
-from app.services.phase25_service import Phase25Service
-from app.schemas.phase25 import (
+from app.services.corporate_client_service import CorporateClientService, Phase25Service
+from app.schemas.corporate_client import (
     SalesTypeCreate,
     SalesTypeUpdate,
     SalesTypeResponse,
@@ -54,7 +54,7 @@ async def create_sales_type(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("ADMIN", "OWNER")),
 ) -> SalesTypeResponse:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.create_sales_type(payload)
 
 
@@ -68,7 +68,7 @@ async def list_sales_types(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> List[SalesTypeResponse]:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.list_sales_types(is_active=is_active)
 
 
@@ -82,7 +82,7 @@ async def get_sales_type(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> SalesTypeResponse:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.get_sales_type(sales_type_id)
 
 
@@ -97,7 +97,7 @@ async def update_sales_type(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("ADMIN", "OWNER")),
 ) -> SalesTypeResponse:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.update_sales_type(sales_type_id, payload)
 
 
@@ -111,7 +111,7 @@ async def delete_sales_type(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("ADMIN", "OWNER")),
 ):
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.delete_sales_type(sales_type_id, hard_delete=hard_delete)
 
 
@@ -130,7 +130,7 @@ async def create_reliable_company(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("ADMIN", "OWNER")),
 ) -> ReliableCompanyResponse:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.create_reliable_company(payload)
 
 
@@ -144,7 +144,7 @@ async def list_reliable_companies(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> List[ReliableCompanyResponse]:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.list_reliable_companies(is_active=is_active)
 
 
@@ -158,7 +158,7 @@ async def get_reliable_company(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ReliableCompanyResponse:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.get_reliable_company(r_company_id)
 
 
@@ -173,7 +173,7 @@ async def update_reliable_company(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("ADMIN", "OWNER")),
 ) -> ReliableCompanyResponse:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.update_reliable_company(r_company_id, payload)
 
 
@@ -187,7 +187,7 @@ async def delete_reliable_company(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("ADMIN", "OWNER")),
 ):
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.delete_reliable_company(r_company_id, hard_delete=hard_delete)
 
 
@@ -206,7 +206,7 @@ async def create_client_master(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("ADMIN", "OWNER", "ACCOUNT", "ACCOUNT HEAD", "OPERATOR", "BACK OFFICE")),
 ) -> ClientMasterResponse:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     username = getattr(current_user, "UserName", None) or str(current_user.UserId)
     return await service.create_client_master(payload, user_name=username)
 
@@ -225,7 +225,7 @@ async def list_client_masters(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> List[ClientMasterResponse]:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.list_client_masters(
         search=search,
         insurance_company_id=insurance_company_id,
@@ -245,7 +245,7 @@ async def get_client_master(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ClientMasterResponse:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.get_client_master(client_master_id)
 
 
@@ -260,7 +260,7 @@ async def update_client_master(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("ADMIN", "OWNER", "ACCOUNT", "ACCOUNT HEAD")),
 ) -> ClientMasterResponse:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.update_client_master(client_master_id, payload)
 
 
@@ -274,7 +274,7 @@ async def delete_client_master(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("ADMIN", "OWNER")),
 ):
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.delete_client_master(client_master_id, hard_delete=hard_delete)
 
 
@@ -291,7 +291,7 @@ async def preview_next_invoice_number(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.preview_next_invoice_number(r_company_id)
 
 
@@ -306,7 +306,7 @@ async def create_commercial_invoice(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("ADMIN", "OWNER", "ACCOUNT", "ACCOUNT HEAD", "OPERATOR", "BACK OFFICE")),
 ) -> CommercialInvoiceResponse:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.create_commercial_invoice(payload, current_user=current_user)
 
 
@@ -326,7 +326,7 @@ async def list_commercial_invoices(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> List[CommercialInvoiceResponse]:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.list_commercial_invoices(
         client_master_id=client_master_id,
         r_company_id=r_company_id,
@@ -352,7 +352,7 @@ async def get_sales_register_report(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("ADMIN", "OWNER", "ACCOUNT", "ACCOUNT HEAD")),
 ) -> CommercialSalesRegisterReportResponse:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.get_sales_register_report(
         r_company_id=r_company_id,
         client_master_id=client_master_id,
@@ -372,7 +372,7 @@ async def get_commercial_invoice(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> CommercialInvoiceResponse:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.get_commercial_invoice(sales_reg_id)
 
 
@@ -391,7 +391,7 @@ async def create_advance(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("ADMIN", "OWNER", "ACCOUNT", "ACCOUNT HEAD")),
 ) -> CompanyAdvanceResponse:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.create_advance(payload, current_user=current_user)
 
 
@@ -405,7 +405,7 @@ async def list_advances(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("ADMIN", "OWNER", "ACCOUNT", "ACCOUNT HEAD")),
 ) -> List[CompanyAdvanceResponse]:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.list_advances(ledger_m_id=ledger_m_id)
 
 
@@ -420,7 +420,7 @@ async def recover_advance(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("ADMIN", "OWNER", "ACCOUNT", "ACCOUNT HEAD")),
 ) -> CompanyAdvanceRecoveryResponse:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.recover_advance(advance_id, payload=payload, current_user=current_user)
 
 
@@ -435,5 +435,5 @@ async def get_advance_report(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("ADMIN", "OWNER", "ACCOUNT", "ACCOUNT HEAD")),
 ) -> CompanyAdvanceReportResponse:
-    service = Phase25Service(db)
+    service = CorporateClientService(db)
     return await service.get_advance_report(advance_id=advance_id, ledger_m_id=ledger_m_id)

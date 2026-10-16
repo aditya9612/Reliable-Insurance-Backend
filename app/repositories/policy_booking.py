@@ -28,7 +28,7 @@ from app.models.payment import TransactionPayment
 from app.models.transaction import Transaction
 from app.models.transaction_app import TransactionAppNew
 from app.models.vehicle import VehicleDetails
-from app.models.phase28_features import FranchiseGridMargin
+from app.models.franchise_margin import FranchiseGridMargin
 
 
 def resolve_financial_year(target_date: Optional[date] = None) -> Tuple[str, str]:

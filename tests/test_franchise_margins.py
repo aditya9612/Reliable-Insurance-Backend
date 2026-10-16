@@ -11,7 +11,7 @@ from sqlalchemy import text, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.integration.test_phase7_policy_booking_api import create_user_with_role
-from app.models.phase28_features import FranchiseGridMargin
+from app.models.franchise_margin import FranchiseGridMargin
 
 
 @pytest.fixture(autouse=True)

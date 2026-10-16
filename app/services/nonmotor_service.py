@@ -15,7 +15,7 @@ from sqlalchemy import select, func, and_, or_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
-from app.models.phase21_nonmotor import (
+from app.models.nonmotor import (
     NonMotorClass,
     NonMotorProduct,
     NonMotorBusinessType,
@@ -28,7 +28,7 @@ from app.models.phase21_nonmotor import (
     NonMotorCommission,
     NonMotorTransaction,
 )
-from app.schemas.phase21_nonmotor import (
+from app.schemas.nonmotor import (
     NonMotorClassCreate,
     NonMotorClassUpdate,
     NonMotorProductCreate,

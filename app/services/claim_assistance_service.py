@@ -11,12 +11,12 @@ from sqlalchemy import select, update, func, and_, or_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.phase26_features import ClaimAssistance, ClaimAssistanceImg
+from app.models.claim_assistance import ClaimAssistance, ClaimAssistanceImg
 from app.models.master import InsuranceCompany
 from app.models.user import User
 from app.repositories.notification import NotificationRepository
 from app.core.rbac import PrincipalContext, is_global_admin_role, is_global_read_role
-from app.schemas.phase26 import (
+from app.schemas.claim_assistance import (
     ClaimAssistanceCreate,
     ClaimAssistanceUpdate,
     ClaimAssistanceAssignClaimNo,
@@ -29,7 +29,7 @@ from app.schemas.phase26 import (
 logger = logging.getLogger(__name__)
 
 
-class Phase26Service:
+class ClaimAssistanceService:
     """Service orchestrating Emergency Roadside Claim Assistance & Accident Intake."""
 
     def __init__(self, db: AsyncSession):
@@ -484,3 +484,7 @@ class Phase26Service:
             pending_claim_assignment=pending,
             claim_assigned=assigned,
         )
+
+
+# Backward-compatibility alias
+Phase26Service = ClaimAssistanceService

@@ -13,9 +13,9 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.phase28_features import FranchiseGridMargin
+from app.models.franchise_margin import FranchiseGridMargin
 from app.core.rbac import PrincipalContext, is_global_admin_role
-from app.schemas.phase28 import (
+from app.schemas.franchise_margin import (
     FranchiseGridMarginCreate,
     FranchiseGridMarginBatchCreate,
     FranchiseGridMarginUpdate,

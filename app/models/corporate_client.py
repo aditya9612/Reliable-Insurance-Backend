@@ -12,7 +12,7 @@ Physical Tables Added:
 7. tbl_invoicesequence (Atomic Monotonic Sequence Counter for Commercial Invoicing)
 
 Pre-existing Table Reused:
-- tbl_salesregistration (Physical table created in Alembic revision b18a0c5d1801, mapped in phase18a_features.py)
+- tbl_salesregistration (Physical table created in Alembic revision b18a0c5d1801, mapped in operations_parity.py)
 """
 from datetime import datetime, date
 from decimal import Decimal

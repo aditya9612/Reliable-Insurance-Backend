@@ -13,7 +13,7 @@ from sqlalchemy import select, update, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
-from app.models.phase20_features import (
+from app.models.operational_extensions import (
     Circular,
     CustomerHelp,
     AppChatBoard,
@@ -27,7 +27,7 @@ from app.models.phase20_features import (
     DeclineModel,
 )
 from app.models.user import User
-from app.schemas.phase20 import (
+from app.schemas.operational_extensions import (
     CircularCreate,
     CircularUpdate,
     CustomerHelpCreate,
@@ -46,7 +46,7 @@ from app.schemas.phase20 import (
 )
 
 
-class Phase20Service:
+class OperationalExtensionService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
@@ -728,3 +728,7 @@ class Phase20Service:
             "reason": None,
             "matching_rule_count": 0,
         }
+
+
+# Backward-compatibility alias
+Phase20Service = OperationalExtensionService

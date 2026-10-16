@@ -9,7 +9,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, and_, or_, desc, func, extract
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.phase24_features import (
+from app.models.hr_payroll import (
     HRWorkingHistory,
     HRFamilyDetails,
     HRReferenceDetails,
@@ -18,8 +18,8 @@ from app.models.phase24_features import (
     HRAdvance,
     HRMonthlyWorkingDetails,
 )
-from app.models.phase23_features import HROrganization, HRDepartment
-from app.schemas.phase24 import (
+from app.models.hr_management import HROrganization, HRDepartment
+from app.schemas.hr_payroll import (
     HRWorkingHistoryCreate,
     HRWorkingHistoryUpdate,
     HRFamilyDetailsCreate,
@@ -39,7 +39,7 @@ from app.schemas.phase24 import (
 )
 
 
-class Phase24Service:
+class HRPayrollService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
@@ -761,3 +761,7 @@ class Phase24Service:
         mwd.UpdateDate = datetime.utcnow()
         await self.db.commit()
         return {"message": f"Monthly working record {working_id} deactivated successfully"}
+
+
+# Backward-compatibility alias
+Phase24Service = HRPayrollService

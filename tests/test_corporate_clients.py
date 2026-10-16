@@ -12,7 +12,7 @@ from sqlalchemy import text, select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.integration.test_phase7_policy_booking_api import create_user_with_role
-from app.models.phase25_features import (
+from app.models.corporate_client import (
     SalesType,
     ReliableCompany,
     ClientMaster,
@@ -21,11 +21,11 @@ from app.models.phase25_features import (
     CompanyAdvDetail,
     InvoiceSequence,
 )
-from app.models.phase18a_features import SalesRegistration
+from app.models.operations_parity import SalesRegistration
 from app.models.account import Account
 from app.models.ledger import LedgerMaster
-from app.services.phase25_service import round_bankers_rupee, Phase25Service
-from app.schemas.phase25 import CommercialInvoiceCreateRequest, CommercialInvoiceLineItemCreate
+from app.services.corporate_client_service import round_bankers_rupee, CorporateClientService, Phase25Service
+from app.schemas.corporate_client import CommercialInvoiceCreateRequest, CommercialInvoiceLineItemCreate
 
 
 import uuid

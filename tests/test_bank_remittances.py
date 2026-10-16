@@ -15,7 +15,7 @@ from sqlalchemy import text, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.integration.test_phase7_policy_booking_api import create_user_with_role
-from app.models.phase27_features import BankDebitRemittance
+from app.models.bank_remittance import BankDebitRemittance
 from app.models.account import Account
 from app.models.ledger import LedgerMaster
 from app.models.transaction import Transaction

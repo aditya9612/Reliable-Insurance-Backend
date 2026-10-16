@@ -10,7 +10,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, and_, or_, desc, func, extract
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.phase23_features import (
+from app.models.hr_management import (
     HROrganization,
     HRDepartment,
     HRDesignation,
@@ -20,7 +20,7 @@ from app.models.phase23_features import (
     HRLeave,
     HRContactPerson,
 )
-from app.schemas.phase23 import (
+from app.schemas.hr_management import (
     HROrganizationCreate,
     HROrganizationUpdate,
     HRDepartmentCreate,
@@ -42,7 +42,7 @@ from app.schemas.phase23 import (
 )
 
 
-class Phase23Service:
+class HRManagementService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
@@ -941,3 +941,7 @@ class Phase23Service:
         contact.UpdateDate = datetime.utcnow()
         await self.db.commit()
         return {"message": f"Contact person {contact_id} deactivated successfully"}
+
+
+# Backward-compatibility alias
+Phase23Service = HRManagementService

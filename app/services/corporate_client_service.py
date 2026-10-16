@@ -9,7 +9,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, update, func, delete, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.phase25_features import (
+from app.models.corporate_client import (
     SalesType,
     ReliableCompany,
     ClientMaster,
@@ -18,10 +18,10 @@ from app.models.phase25_features import (
     CompanyAdvDetail,
     InvoiceSequence,
 )
-from app.models.phase18a_features import SalesRegistration
+from app.models.operations_parity import SalesRegistration
 from app.models.account import Account
 from app.models.user import User
-from app.schemas.phase25 import (
+from app.schemas.corporate_client import (
     SalesTypeCreate,
     SalesTypeUpdate,
     SalesTypeResponse,
@@ -64,7 +64,7 @@ def _q2(val: Any) -> Decimal:
     return Decimal(str(val)).quantize(CENTS)
 
 
-class Phase25Service:
+class CorporateClientService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
@@ -927,3 +927,7 @@ class Phase25Service:
             total_recovered_amount=tot_recd.quantize(CENTS),
             total_balance_amount=tot_bal.quantize(CENTS),
         )
+
+
+# Backward-compatibility alias
+Phase25Service = CorporateClientService

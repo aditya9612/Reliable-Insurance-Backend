@@ -15,7 +15,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select, update, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.phase27_features import BankDebitRemittance
+from app.models.bank_remittance import BankDebitRemittance
 from app.models.account import Account
 from app.models.ledger import LedgerMaster
 from app.models.transaction import Transaction
@@ -23,7 +23,7 @@ from app.models.customer import Customer
 from app.models.master import InsuranceCompany, Branch
 from app.core.rbac import PrincipalContext, is_global_admin_role, is_global_read_role
 from app.repositories.commission_accounting import CommissionAccountingRepository
-from app.schemas.phase27 import (
+from app.schemas.bank_remittance import (
     CompanyRemittanceBatchRequest,
     CashToBankDepositRequest,
     DebitRemittanceResponse,

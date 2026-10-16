@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db, get_current_user, require_roles
 from app.models.user import User
-from app.schemas.phase18a import (
+from app.schemas.operations_parity import (
     PolicyExtractionUploadResponse,
     PolicyExtractionPrefillResponse,
     PolicyExtractionLinkTransactionRequest,
@@ -63,7 +63,7 @@ from app.schemas.phase18a import (
     OfficeExpenseVoucherCreateRequest,
     OfficeExpenseVoucherResponse,
 )
-from app.services.phase18a_service import Phase18AService
+from app.services.operations_parity_service import OperationsParityService, Phase18AService
 
 documents_p18a_router = APIRouter()
 batch_tasks_p18a_router = APIRouter()
@@ -117,7 +117,7 @@ async def upload_policy_for_extraction(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> PolicyExtractionUploadResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.upload_and_extract_policy_pdf(
         file=file,
         current_user=current_user,
@@ -137,7 +137,7 @@ async def get_policy_extraction_prefill(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> PolicyExtractionPrefillResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.get_policy_extraction_prefill(identifier)
 
 
@@ -153,7 +153,7 @@ async def link_policy_extraction_to_transaction(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> PolicyExtractionLinkTransactionResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.link_extraction_to_transaction(
         calliber_policy_id=calliber_policy_id,
         transaction_id=payload.transaction_id,
@@ -176,7 +176,7 @@ async def enforce_pending_cash_locks(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> PendingCashLockResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.enforce_pending_cash_locks(payload)
 
 
@@ -192,7 +192,7 @@ async def enforce_pending_app_transaction_locks(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> PendingAppTransactionLockResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.enforce_pending_app_transaction_locks(payload)
 
 
@@ -206,7 +206,7 @@ async def get_operator_lock_status(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> OperatorLockStatusResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.get_operator_lock_status(current_user)
 
 
@@ -225,7 +225,7 @@ async def create_bulk_ideal_payment_receipts(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> IdealPaymentReceiptBulkResult:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.process_bulk_ideal_payment_receipts(payload.receipts, current_user)
 
 
@@ -241,7 +241,7 @@ async def list_ideal_payment_receipts(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> List[IdealPaymentReceiptResponse]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.list_ideal_payment_receipts(posp_id=posp_id, receipt_type=receipt_type)
 
 
@@ -256,7 +256,7 @@ async def create_instapay_request(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> IdealPaymentReceiptResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.create_instapay_request(payload, current_user)
 
 
@@ -275,7 +275,7 @@ async def create_commission_rate_grid(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> CommissionRateGridResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.create_commission_rate_grid(payload, current_user)
 
 
@@ -291,7 +291,7 @@ async def import_commission_grids_csv(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> List[CommissionRateGridResponse]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.import_commission_grids_csv(file, current_user)
 
 
@@ -311,7 +311,7 @@ async def lookup_commission_rate_grids(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> List[CommissionRateGridResponse]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.lookup_commission_rate_grids(
         insurance_company_id=insurance_company_id,
         grid_scope=grid_scope,
@@ -333,7 +333,7 @@ async def evaluate_reliance_capping(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> RelianceCappingEvaluateResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return service.evaluate_reliance_capping(payload)
 
 
@@ -349,7 +349,7 @@ async def create_cashback_entry(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> CashbackResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.create_cashback_entry(payload, current_user)
 
 
@@ -365,7 +365,7 @@ async def list_cashback_entries(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> List[CashbackResponse]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.list_cashback_entries(transaction_id=transaction_id, agent_id=agent_id)
 
 
@@ -383,7 +383,7 @@ async def create_remaining_pending_cash(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> RemainingPendingCashResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.create_remaining_pending_cash(payload, current_user)
 
 
@@ -399,7 +399,7 @@ async def list_remaining_pending_cash(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> List[RemainingPendingCashResponse]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.list_remaining_pending_cash(
         branch_id=branch_id, cashier_approval=cashier_approval
     )
@@ -418,7 +418,7 @@ async def approve_remaining_pending_cash(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> RemainingPendingCashResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.approve_remaining_pending_cash(
         pending_cash_id=pending_cash_id, payload=payload, current_user=current_user
     )
@@ -439,7 +439,7 @@ async def create_sales_registration(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> SalesRegistrationResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.create_sales_registration(payload, current_user)
 
 
@@ -455,7 +455,7 @@ async def list_sales_registrations(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> List[SalesRegistrationResponse]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.list_sales_registrations(
         client_master_id=client_master_id, invoice_no=invoice_no
     )
@@ -474,7 +474,7 @@ async def adjust_sales_registration_advance(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> SalesRegistrationResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.adjust_sales_registration_advance(
         sales_reg_id=sales_reg_id, payload=payload, current_user=current_user
     )
@@ -492,7 +492,7 @@ async def create_office_expense_voucher(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> OfficeExpenseVoucherResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.create_office_expense_voucher(payload, current_user)
 
 
@@ -507,7 +507,7 @@ async def list_office_expense_vouchers(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> List[OfficeExpenseVoucherResponse]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.list_office_expense_vouchers(branch_id=branch_id)
 
 
@@ -525,7 +525,7 @@ async def get_instapay_authority_summary(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> InstaPayAuthoritySummaryResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.get_instapay_authority_summary(report_date)
 
 
@@ -540,7 +540,7 @@ async def dispatch_instapay_authority_summary(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.dispatch_instapay_authority_summary(payload)
 
 
@@ -556,7 +556,7 @@ async def create_sales_target(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> SalesTargetResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.create_sales_target(payload, current_user)
 
 
@@ -573,7 +573,7 @@ async def update_sales_target(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> SalesTargetResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.update_sales_target(target_id, payload, current_user)
 
 
@@ -589,7 +589,7 @@ async def list_sales_targets(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> List[SalesTargetResponse]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.list_sales_targets(emp_id=emp_id, financial_year=financial_year)
 
 
@@ -607,7 +607,7 @@ async def create_inspection_request(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> InspectionRequestResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.create_inspection_request(payload, current_user)
 
 
@@ -623,7 +623,7 @@ async def list_inspection_requests(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> List[InspectionRequestResponse]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.list_inspection_requests(status_filter=status_filter, branch_id=branch_id)
 
 
@@ -637,7 +637,7 @@ async def get_pending_inspection_count(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Dict[str, int]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.get_pending_inspection_count(branch_id=branch_id)
 
 
@@ -654,7 +654,7 @@ async def decide_inspection_request(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> InspectionRequestResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.decide_inspection_request(inspection_id, payload, current_user)
 
 
@@ -688,7 +688,7 @@ async def create_support_ticket(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> SupportTicketResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.create_support_ticket(payload, current_user)
 
 
@@ -704,7 +704,7 @@ async def list_support_tickets(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> List[SupportTicketResponse]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.list_support_tickets(status_filter=status_filter, user_id=user_id)
 
 
@@ -717,7 +717,7 @@ async def get_support_ticket_counts(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Dict[str, int]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.get_support_ticket_counts()
 
 
@@ -733,7 +733,7 @@ async def add_support_ticket_remark(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> SupportTicketResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.add_support_ticket_remark(support_id, payload, current_user)
 
 
@@ -750,7 +750,7 @@ async def update_support_ticket_status(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> SupportTicketResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.update_support_ticket_status(support_id, payload, current_user)
 
 
@@ -786,7 +786,7 @@ async def import_telecalling_leads(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> List[CallingLeadResponse]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.import_calling_leads(payload.leads, current_user)
 
 
@@ -805,7 +805,7 @@ async def list_telecalling_leads(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> List[CallingLeadResponse]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.list_calling_leads(mode=mode, assigned_user_id=assigned_user_id)
 
 
@@ -822,7 +822,7 @@ async def assign_telecalling_lead(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> CallingLeadResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.assign_calling_lead(calling_import_id, payload.assigned_user_id)
 
 
@@ -838,7 +838,7 @@ async def record_telecalling_disposition(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> CallingLeadResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.record_calling_disposition(calling_import_id, payload, current_user)
 
 
@@ -857,7 +857,7 @@ async def attach_requested_quotation_file(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> RequestedQuotationFileResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.attach_requested_quotation_file(quotation_id, payload, current_user)
 
 
@@ -872,7 +872,7 @@ async def list_requested_quotation_files(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> List[RequestedQuotationFileResponse]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.list_requested_quotation_files(quotation_id, current_user)
 
 
@@ -890,7 +890,7 @@ async def create_sub_agent(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.create_sub_agent(agent_id, payload, current_user)
 
 
@@ -904,7 +904,7 @@ async def list_sub_agents(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> List[Dict[str, Any]]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.list_sub_agents(agent_id, current_user)
 
 
@@ -920,7 +920,7 @@ async def calculate_sub_agent_split(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> SubAgentSplitCalculateResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.calculate_sub_agent_split(agent_id, payload, current_user)
 
 
@@ -938,7 +938,7 @@ async def record_geo_check_in(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> GeoCheckInResponse:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.record_geo_check_in(payload, current_user)
 
 
@@ -953,5 +953,5 @@ async def list_geo_check_ins(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> List[GeoCheckInResponse]:
-    service = Phase18AService(session)
+    service = OperationsParityService(session)
     return await service.list_geo_check_ins(user_id=user_id)

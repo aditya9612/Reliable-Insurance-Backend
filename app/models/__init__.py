@@ -89,7 +89,7 @@ from app.models.utility import (
     HealthMember,
     ImportAgentPolicy,
 )
-from app.models.phase18a_features import (
+from app.models.operations_parity import (
     IdealPaymentReceipt,
     CommissionRateGrid,
     RemainingPendingCash,
@@ -99,7 +99,7 @@ from app.models.phase18a_features import (
     CallingImportLead,
     CashbackEntry,
 )
-from app.models.phase20_features import (
+from app.models.operational_extensions import (
     Circular,
     CustomerHelp,
     AppChatBoard,
@@ -112,7 +112,7 @@ from app.models.phase20_features import (
     GridDeclineMaster,
     DeclineModel,
 )
-from app.models.phase21_nonmotor import (
+from app.models.nonmotor import (
     NonMotorClass,
     NonMotorProduct,
     NonMotorBusinessType,
@@ -125,7 +125,7 @@ from app.models.phase21_nonmotor import (
     NonMotorCommission,
     NonMotorTransaction,
 )
-from app.models.phase22_features import (
+from app.models.executive_commission import (
     SalesExecutiveCommission,
     LocationHeadCommission,
     LocationHeadSalesExMap,
@@ -133,7 +133,7 @@ from app.models.phase22_features import (
     AppBillingDetails,
     AppBillingAttachment,
 )
-from app.models.phase23_features import (
+from app.models.hr_management import (
     HROrganization,
     HRDepartment,
     HRDesignation,
@@ -143,7 +143,7 @@ from app.models.phase23_features import (
     HRLeave,
     HRContactPerson,
 )
-from app.models.phase24_features import (
+from app.models.hr_payroll import (
     HRWorkingHistory,
     HRFamilyDetails,
     HRReferenceDetails,
@@ -152,7 +152,7 @@ from app.models.phase24_features import (
     HRAdvance,
     HRMonthlyWorkingDetails,
 )
-from app.models.phase25_features import (
+from app.models.corporate_client import (
     SalesType,
     ReliableCompany,
     ClientMaster,
@@ -161,17 +161,17 @@ from app.models.phase25_features import (
     CompanyAdvDetail,
     InvoiceSequence,
 )
-from app.models.phase26_features import (
+from app.models.claim_assistance import (
     ClaimAssistance,
     ClaimAssistanceImg,
 )
-from app.models.phase27_features import (
+from app.models.bank_remittance import (
     BankDebitRemittance,
 )
-from app.models.phase28_features import (
+from app.models.franchise_margin import (
     FranchiseGridMargin,
 )
-from app.models.phase29_features import (
+from app.models.temporary_operator import (
     TemporaryOperator,
 )
 

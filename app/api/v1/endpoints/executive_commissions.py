@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.core.dependencies import get_current_user, require_roles
 from app.models.user import User
-from app.services.phase22_service import Phase22Service
-from app.schemas.phase22 import (
+from app.services.executive_commission_service import ExecutiveCommissionService, Phase22Service
+from app.schemas.executive_commission import (
     SalesExecutiveCommissionCreate,
     SalesExecutiveCommissionUpdate,
     SalesExecutiveCommissionResponse,
@@ -79,7 +79,7 @@ async def list_sales_ex_commissions(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*SALES_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.list_sales_ex_commissions(
         sales_ex_id=sales_ex_id,
         insurance_company_id=insurance_company_id,
@@ -103,7 +103,7 @@ async def create_sales_ex_commission(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.create_sales_ex_commission(
         payload=payload, current_user_id=current_user.UserId
     )
@@ -119,7 +119,7 @@ async def lookup_sales_ex_commission(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*SALES_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.lookup_sales_ex_commission(payload)
 
 
@@ -133,7 +133,7 @@ async def get_sales_ex_commission(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*SALES_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.get_sales_ex_commission(commission_id)
 
 
@@ -148,7 +148,7 @@ async def update_sales_ex_commission(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.update_sales_ex_commission(
         commission_id=commission_id,
         payload=payload,
@@ -166,7 +166,7 @@ async def delete_sales_ex_commission(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.delete_sales_ex_commission(
         commission_id=commission_id,
         current_user_id=current_user.UserId,
@@ -192,7 +192,7 @@ async def list_location_head_commissions(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.list_location_head_commissions(
         location_head_id=location_head_id,
         insurance_company_id=insurance_company_id,
@@ -214,7 +214,7 @@ async def create_location_head_commission(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.create_location_head_commission(
         payload=payload, current_user_id=current_user.UserId
     )
@@ -230,7 +230,7 @@ async def lookup_location_head_commission(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.lookup_location_head_commission(payload)
 
 
@@ -244,7 +244,7 @@ async def assign_sales_executives(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.assign_sales_executives_to_location_head(
         payload=payload, current_user_id=current_user.UserId
     )
@@ -260,7 +260,7 @@ async def get_location_head_for_sales_ex(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*SALES_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     result = await service.get_location_head_for_sales_executive(sales_ex_id)
     return result
 
@@ -275,7 +275,7 @@ async def list_team_under_location_head(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.list_sales_executives_under_location_head(location_head_id)
 
 
@@ -289,7 +289,7 @@ async def get_location_head_commission(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.get_location_head_commission(commission_id)
 
 
@@ -304,7 +304,7 @@ async def update_location_head_commission(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.update_location_head_commission(
         commission_id=commission_id,
         payload=payload,
@@ -322,7 +322,7 @@ async def delete_location_head_commission(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.delete_location_head_commission(
         commission_id=commission_id,
         current_user_id=current_user.UserId,
@@ -347,7 +347,7 @@ async def list_insurer_portals(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*SALES_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.list_insurer_portals(
         insurance_company_id=insurance_company_id,
         broker_id=broker_id,
@@ -368,7 +368,7 @@ async def create_insurer_portal(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.create_insurer_portal(
         payload=payload, current_user_id=current_user.UserId
     )
@@ -384,7 +384,7 @@ async def get_insurer_portal(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*SALES_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.get_insurer_portal(portal_id)
 
 
@@ -399,7 +399,7 @@ async def update_insurer_portal(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.update_insurer_portal(
         portal_id=portal_id,
         payload=payload,
@@ -417,7 +417,7 @@ async def delete_insurer_portal(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.delete_insurer_portal(
         portal_id=portal_id,
         current_user_id=current_user.UserId,
@@ -443,7 +443,7 @@ async def list_billing_claims(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*SALES_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.list_billing_claims(
         sales_ex_id=sales_ex_id,
         status_filter=status_filter,
@@ -465,7 +465,7 @@ async def submit_billing_claim(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*SALES_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.submit_billing_claim(
         payload=payload, current_user_id=current_user.UserId
     )
@@ -481,7 +481,7 @@ async def get_billing_claim(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*SALES_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.get_billing_claim_details(billing_id)
 
 
@@ -496,7 +496,7 @@ async def update_billing_status(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles(*FINANCE_ROLES)),
 ):
-    service = Phase22Service(db)
+    service = ExecutiveCommissionService(db)
     return await service.update_billing_status(
         billing_id=billing_id,
         payload=payload,

@@ -13,8 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.core.dependencies import get_current_user, require_roles
 from app.models.user import User
-from app.services.phase20_service import Phase20Service
-from app.schemas.phase20 import (
+from app.services.operational_extension_service import OperationalExtensionService, Phase20Service
+from app.schemas.operational_extensions import (
     CircularCreate,
     CircularUpdate,
     CircularResponse,
@@ -73,7 +73,7 @@ async def create_circular_endpoint(
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
     db: AsyncSession = Depends(get_db),
 ) -> CircularResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     circular = await service.create_circular(payload, current_user)
     return CircularResponse.model_validate(circular)
 
@@ -90,7 +90,7 @@ async def list_circulars_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[CircularResponse]:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     circulars = await service.list_circulars(active_only=active_only, skip=skip, limit=limit)
     return [CircularResponse.model_validate(c) for c in circulars]
 
@@ -105,7 +105,7 @@ async def get_circular_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> CircularResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     circular = await service.get_circular(circular_id)
     return CircularResponse.model_validate(circular)
 
@@ -121,7 +121,7 @@ async def update_circular_endpoint(
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
     db: AsyncSession = Depends(get_db),
 ) -> CircularResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     circular = await service.update_circular(circular_id, payload)
     return CircularResponse.model_validate(circular)
 
@@ -136,7 +136,7 @@ async def delete_circular_endpoint(
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     await service.delete_circular(circular_id)
     return {"status": "SUCCESS", "message": f"Circular {circular_id} deactivated."}
 
@@ -156,7 +156,7 @@ async def create_help_ticket_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> CustomerHelpResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     ticket = await service.create_help_ticket(payload, current_user)
     return CustomerHelpResponse.model_validate(ticket)
 
@@ -174,7 +174,7 @@ async def list_help_tickets_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[CustomerHelpResponse]:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     tickets = await service.list_help_tickets(
         status_filter=status_filter, customer_id=customer_id, skip=skip, limit=limit
     )
@@ -191,7 +191,7 @@ async def get_help_ticket_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> CustomerHelpResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     ticket = await service.get_help_ticket(ticket_id)
     return CustomerHelpResponse.model_validate(ticket)
 
@@ -207,7 +207,7 @@ async def resolve_help_ticket_endpoint(
     current_user: User = Depends(require_roles(*COORDINATOR_ROLES)),
     db: AsyncSession = Depends(get_db),
 ) -> CustomerHelpResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     ticket = await service.resolve_help_ticket(ticket_id, payload, current_user)
     return CustomerHelpResponse.model_validate(ticket)
 
@@ -223,7 +223,7 @@ async def post_chat_message_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> ChatBoardMessageResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     msg = await service.post_chat_message(payload, current_user)
     return ChatBoardMessageResponse.model_validate(msg)
 
@@ -242,7 +242,7 @@ async def list_chat_messages_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[ChatBoardMessageResponse]:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     messages = await service.list_chat_messages(
         cust_help_id=cust_help_id,
         agent_id=agent_id,
@@ -264,7 +264,7 @@ async def reply_chat_message_endpoint(
     current_user: User = Depends(require_roles(*COORDINATOR_ROLES)),
     db: AsyncSession = Depends(get_db),
 ) -> ChatBoardMessageResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     msg = await service.reply_chat_message(chat_id, payload, current_user)
     return ChatBoardMessageResponse.model_validate(msg)
 
@@ -284,7 +284,7 @@ async def create_web_notification_endpoint(
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
     db: AsyncSession = Depends(get_db),
 ) -> WebNotificationResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     notif = await service.create_web_notification(payload, current_user)
     return WebNotificationResponse.model_validate(notif)
 
@@ -300,7 +300,7 @@ async def list_web_notifications_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[WebNotificationResponse]:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     notifications = await service.list_active_notifications(target_role=target_role, branch_id=branch_id)
     return [WebNotificationResponse.model_validate(n) for n in notifications]
 
@@ -315,7 +315,7 @@ async def dismiss_web_notification_endpoint(
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     await service.dismiss_notification(notification_id)
     return {"status": "SUCCESS", "message": f"Notification {notification_id} dismissed."}
 
@@ -335,7 +335,7 @@ async def record_reward_points_endpoint(
     current_user: User = Depends(require_roles(*FINANCE_ROLES)),
     db: AsyncSession = Depends(get_db),
 ) -> RewardPointResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     reward = await service.record_reward_points(payload, current_user)
     return RewardPointResponse.model_validate(reward)
 
@@ -353,7 +353,7 @@ async def get_partner_reward_points_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[RewardPointResponse]:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     points = await service.get_partner_reward_points(
         partner_type=partner_type, partner_id=partner_id, skip=skip, limit=limit
     )
@@ -371,7 +371,7 @@ async def get_reward_points_summary_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> RewardPointSummaryResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     summary = await service.get_reward_points_summary(partner_type=partner_type, partner_id=partner_id)
     return RewardPointSummaryResponse.model_validate(summary)
 
@@ -391,7 +391,7 @@ async def create_cluster_endpoint(
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
     db: AsyncSession = Depends(get_db),
 ) -> ClusterMasterResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     cluster = await service.create_cluster(payload, current_user)
     return ClusterMasterResponse.model_validate(cluster)
 
@@ -410,7 +410,7 @@ async def list_clusters_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[ClusterMasterResponse]:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     clusters = await service.list_clusters(
         insurance_company_id=insurance_company_id,
         state_id=state_id,
@@ -432,7 +432,7 @@ async def create_cluster_broker_grid_endpoint(
     current_user: User = Depends(require_roles(*FINANCE_ROLES)),
     db: AsyncSession = Depends(get_db),
 ) -> ClusterWiseBrokerGridResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     grid = await service.create_cluster_broker_grid(payload, current_user)
     return ClusterWiseBrokerGridResponse.model_validate(grid)
 
@@ -452,7 +452,7 @@ async def list_cluster_broker_grids_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[ClusterWiseBrokerGridResponse]:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     grids = await service.list_cluster_broker_grids(
         broker_id=broker_id,
         insurance_company_id=insurance_company_id,
@@ -475,7 +475,7 @@ async def create_cluster_agent_grid_endpoint(
     current_user: User = Depends(require_roles(*FINANCE_ROLES)),
     db: AsyncSession = Depends(get_db),
 ) -> ClusterWiseAgentGridResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     grid = await service.create_cluster_agent_grid(payload, current_user)
     return ClusterWiseAgentGridResponse.model_validate(grid)
 
@@ -495,7 +495,7 @@ async def list_cluster_agent_grids_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[ClusterWiseAgentGridResponse]:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     grids = await service.list_cluster_agent_grids(
         agent_id=agent_id,
         insurance_company_id=insurance_company_id,
@@ -517,7 +517,7 @@ async def get_cluster_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> ClusterMasterResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     cluster = await service.get_cluster(cluster_id)
     return ClusterMasterResponse.model_validate(cluster)
 
@@ -534,7 +534,7 @@ async def add_cluster_rto_endpoint(
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
     db: AsyncSession = Depends(get_db),
 ) -> ClusterDetailResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     payload.ClusterMId = cluster_id
     detail = await service.add_cluster_rto(payload, current_user)
     return ClusterDetailResponse.model_validate(detail)
@@ -555,7 +555,7 @@ async def create_grid_decline_endpoint(
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
     db: AsyncSession = Depends(get_db),
 ) -> GridDeclineResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     rule = await service.create_grid_decline(payload, current_user)
     return GridDeclineResponse.model_validate(rule)
 
@@ -575,7 +575,7 @@ async def list_grid_declines_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[GridDeclineResponse]:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     rules = await service.list_grid_declines(
         insurance_company_id=insurance_company_id,
         make_id=make_id,
@@ -598,7 +598,7 @@ async def create_decline_model_detail_endpoint(
     current_user: User = Depends(require_roles(*ADMIN_ROLES)),
     db: AsyncSession = Depends(get_db),
 ) -> DeclineModelResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     rule = await service.create_decline_model_detail(payload, current_user)
     return DeclineModelResponse.model_validate(rule)
 
@@ -617,7 +617,7 @@ async def list_decline_model_details_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> List[DeclineModelResponse]:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     rules = await service.list_decline_model_details(
         insurance_company_id=insurance_company_id,
         make_id=make_id,
@@ -638,6 +638,6 @@ async def check_underwriting_decline_endpoint(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> UnderwritingDeclineCheckResponse:
-    service = Phase20Service(db)
+    service = OperationalExtensionService(db)
     result = await service.check_underwriting_decline(payload)
     return UnderwritingDeclineCheckResponse.model_validate(result)
