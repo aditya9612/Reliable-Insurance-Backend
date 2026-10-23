@@ -2,14 +2,17 @@
 Operational Background Tasks for Phase 13.
 Scheduled renewal scanning and daily executive payment reporting.
 """
-from datetime import datetime, timedelta
-from typing import Dict, Any, List
+from datetime import datetime, date, time, timedelta, timezone
+from zoneinfo import ZoneInfo
+from typing import Dict, Any, List, Optional, Union
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.transaction import Transaction
 from app.models.payment import TransactionPayment
 from app.services.renewal_service import RenewalService, get_indian_financial_year
 from app.schemas.renewal import CreateRenewalFollowupRequest
+
+IST = ZoneInfo("Asia/Kolkata")
 
 
 async def daily_renewal_expiry_check(
@@ -58,42 +61,57 @@ async def daily_renewal_expiry_check(
 
 async def daily_payment_report(
     session: AsyncSession,
-    report_date: datetime = None,
+    report_date: Optional[Union[datetime, date]] = None,
 ) -> Dict[str, Any]:
     """
     Scheduled task (daily Celery/cron job) to aggregate day's payment instruments
     and booked transactions for executive distribution.
     Replaces legacy InstaPay / daily collection email routines.
+    Alings day boundaries to Indian Standard Time (IST, Asia/Kolkata).
     """
     if report_date is None:
-        report_date = datetime.utcnow()
+        target_date = datetime.now(IST).date()
+    elif isinstance(report_date, datetime):
+        if report_date.tzinfo is not None:
+            target_date = report_date.astimezone(IST).date()
+        else:
+            target_date = report_date.date()
+    elif isinstance(report_date, date):
+        target_date = report_date
+    else:
+        raise ValueError(f"Invalid report_date type: {type(report_date)}")
 
-    start_of_day = datetime(report_date.year, report_date.month, report_date.day, 0, 0, 0)
-    end_of_day = start_of_day + timedelta(days=1)
+    # 1. Compute IST midnight boundaries and map to UTC for matching naive UTC PaymentDate
+    ist_midnight_start = datetime.combine(target_date, time.min, tzinfo=IST)
+    ist_midnight_end = ist_midnight_start + timedelta(days=1)
+    utc_payment_start = ist_midnight_start.astimezone(timezone.utc).replace(tzinfo=None)
+    utc_payment_end = ist_midnight_end.astimezone(timezone.utc).replace(tzinfo=None)
 
-    # 1. Payments in period
+    # 2. Payments in period (matching UTC window for IST day)
     payment_stmt = (
         select(
             func.count(TransactionPayment.PaymentId),
             func.coalesce(func.sum(TransactionPayment.PaidAmount), 0.0),
         )
         .where(
-            TransactionPayment.PaymentDate >= start_of_day,
-            TransactionPayment.PaymentDate < end_of_day,
+            TransactionPayment.PaymentDate >= utc_payment_start,
+            TransactionPayment.PaymentDate < utc_payment_end,
         )
     )
     payment_res = await session.execute(payment_stmt)
     payment_count, payment_total = payment_res.first()
 
-    # 2. Booked transactions in period
+    # 3. Booked transactions in period (calendar date boundary)
+    cal_start = datetime.combine(target_date, time.min)
+    cal_end = cal_start + timedelta(days=1)
     tx_stmt = (
         select(
             func.count(Transaction.TransanctionId),
             func.coalesce(func.sum(Transaction.Amount), 0.0),
         )
         .where(
-            Transaction.RiskStartdate >= start_of_day,
-            Transaction.RiskStartdate < end_of_day,
+            Transaction.RiskStartdate >= cal_start,
+            Transaction.RiskStartdate < cal_end,
             or_(Transaction.isdeleted == "0", Transaction.isdeleted.is_(None)),
         )
     )
@@ -101,12 +119,15 @@ async def daily_payment_report(
     tx_count, tx_total = tx_res.first()
 
     return {
-        "report_date": start_of_day.strftime("%Y-%m-%d"),
+        "report_date": target_date.strftime("%Y-%m-%d"),
         "receipts_count": int(payment_count or 0),
         "receipts_total_amount": float(payment_total or 0.0),
         "payments_count": int(payment_count or 0),
         "payments_total_amount": float(payment_total or 0.0),
         "booked_policies_count": int(tx_count or 0),
         "booked_premium_total": float(tx_total or 0.0),
-        "generated_at": datetime.utcnow().isoformat(),
+        "generated_at": datetime.now(IST).isoformat(),
+        "timezone": "Asia/Kolkata",
+        "utc_window_start": utc_payment_start.isoformat(),
+        "utc_window_end": utc_payment_end.isoformat(),
     }
