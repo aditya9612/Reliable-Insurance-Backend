@@ -4,7 +4,60 @@ Pydantic Schemas for Phase 15B — Employee, Agent & Franchise Profiles.
 from datetime import datetime, date
 from decimal import Decimal
 from typing import Optional, List
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+from app.schemas.common_validators import (
+    validate_indian_mobile,
+    validate_pan,
+    validate_aadhaar,
+    validate_ifsc,
+    validate_pin_code,
+    validate_email_syntax,
+)
+
+
+class ProfileValidationMixin:
+    """Reusable input validators for profile creation and mutation schemas."""
+
+    @field_validator("MoblieNo", "MoblieNo1", "MoblieNo2", "MobileNo", check_fields=False)
+    @classmethod
+    def _validate_mobile(cls, v: Optional[str]) -> Optional[str]:
+        return validate_indian_mobile(v)
+
+    @field_validator("EmailId", check_fields=False)
+    @classmethod
+    def _validate_email(cls, v: Optional[str]) -> Optional[str]:
+        return validate_email_syntax(v)
+
+    @field_validator("PAN_No", "PANNo", check_fields=False)
+    @classmethod
+    def _validate_pan(cls, v: Optional[str]) -> Optional[str]:
+        return validate_pan(v)
+
+    @field_validator("AadharNo", check_fields=False)
+    @classmethod
+    def _validate_aadhaar(cls, v: Optional[str]) -> Optional[str]:
+        return validate_aadhaar(v)
+
+    @field_validator("Ifsc_code", check_fields=False)
+    @classmethod
+    def _validate_ifsc(cls, v: Optional[str]) -> Optional[str]:
+        return validate_ifsc(v)
+
+    @field_validator("PerPinCode", check_fields=False)
+    @classmethod
+    def _validate_pin(cls, v: Optional[str]) -> Optional[str]:
+        return validate_pin_code(v)
+
+    @field_validator("EmpFName", "AgentFName", "FranFName", check_fields=False)
+    @classmethod
+    def _validate_first_name(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            s = v.strip()
+            if not s:
+                raise ValueError("First name cannot be empty or whitespace only")
+            return s
+        return v
 
 
 # ============================================================================
@@ -75,11 +128,16 @@ class EmployeeBase(BaseModel):
     Hie_DataOprn: Optional[str] = None
 
 
-class EmployeeCreate(EmployeeBase):
+class EmployeeCreate(EmployeeBase, ProfileValidationMixin):
+    model_config = ConfigDict(extra="forbid")
+
+    EmpFName: str = Field(..., min_length=1, max_length=100)
     UserPassword: Optional[str] = None
 
 
-class EmployeeUpdate(BaseModel):
+class EmployeeUpdate(BaseModel, ProfileValidationMixin):
+    model_config = ConfigDict(extra="forbid")
+
     UserName: Optional[str] = None
     UserPassword: Optional[str] = None
     EmpCode: Optional[str] = None
@@ -155,11 +213,15 @@ class AgentBase(BaseModel):
     kyc_remarks: Optional[str] = None
 
 
-class AgentCreate(AgentBase):
-    pass
+class AgentCreate(AgentBase, ProfileValidationMixin):
+    model_config = ConfigDict(extra="forbid")
+
+    AgentFName: str = Field(..., min_length=1, max_length=100)
 
 
-class AgentUpdate(BaseModel):
+class AgentUpdate(BaseModel, ProfileValidationMixin):
+    model_config = ConfigDict(extra="forbid")
+
     AgentCode: Optional[str] = None
     AgentFName: Optional[str] = None
     AgentMName: Optional[str] = None
@@ -245,11 +307,16 @@ class FranchiseBase(BaseModel):
     UserRoleId: Optional[int] = None
 
 
-class FranchiseCreate(FranchiseBase):
+class FranchiseCreate(FranchiseBase, ProfileValidationMixin):
+    model_config = ConfigDict(extra="forbid")
+
+    FranFName: str = Field(..., min_length=1, max_length=100)
     UserPassword: Optional[str] = None
 
 
-class FranchiseUpdate(BaseModel):
+class FranchiseUpdate(BaseModel, ProfileValidationMixin):
+    model_config = ConfigDict(extra="forbid")
+
     UserName: Optional[str] = None
     UserPassword: Optional[str] = None
     initial: Optional[str] = None

@@ -92,6 +92,30 @@ def round_2dp(val: Decimal) -> Decimal:
     return val.quantize(TWO_DP, rounding=ROUND_HALF_UP)
 
 
+def compute_legacy_default_expiry(start_date: date, years: int = 1) -> date:
+    """
+    Computes calendar-correct legacy-compatible default policy expiry date matching C#
+    `DateTime.AddYears(years).AddDays(-1)`.
+    Correctly accounts for leap years and leap-day boundaries (Feb 29 -> Feb 28 in non-leap year).
+    Normalizes datetime inputs to date, ensuring consistent return type.
+    """
+    if start_date is None:
+        raise ValueError("start_date cannot be None")
+    if years < 1:
+        raise ValueError(f"Tenure years must be at least 1, got {years}")
+
+    if isinstance(start_date, datetime):
+        start_date = start_date.date()
+
+    target_year = start_date.year + years
+    try:
+        anniversary = start_date.replace(year=target_year)
+    except ValueError:
+        # Feb 29 in non-leap anniversary year falls back to Feb 28, matching .NET DateTime.AddYears
+        anniversary = date(target_year, 2, 28)
+    return anniversary - timedelta(days=1)
+
+
 class PolicyBookingService:
     """Business logic service for Phase 7 Policy Booking & Transaction Engine."""
 
@@ -1338,9 +1362,7 @@ class PolicyBookingService:
                     else trans_dt
                 )
                 risk_dt = datetime.combine(payload.risk_start_date, datetime.min.time())
-                exp_date = payload.expiry_date or (
-                    payload.risk_start_date + timedelta(days=364)
-                )
+                exp_date = payload.expiry_date or compute_legacy_default_expiry(payload.risk_start_date)
                 exp_dt = datetime.combine(exp_date, datetime.min.time())
 
                 t_status = "Booked" if pay_summary.is_complete_payment == 1 else "Pending"
@@ -2023,6 +2045,12 @@ class PolicyBookingService:
                 if payload.remark is not None:
                     tx.Remark = payload.remark
 
+                if tx.RiskStartdate and tx.ExpiryDate and tx.ExpiryDate < tx.RiskStartdate:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Policy ExpiryDate cannot be earlier than RiskStartdate.",
+                    )
+
                 tx.UpdateDate = datetime.utcnow()
                 tx.UpdateUser = str(current_user.UserId)
                 tx.UpdateEntryStatus = 1
@@ -2444,7 +2472,9 @@ class PolicyBookingService:
             quot_type = "SELFQUO" if q_src == "SELF_QUOTATION" else "ASSISTED"
 
         now_dt = datetime.utcnow()
-        exp_date = payload.expiry_date or (payload.start_date + timedelta(days=364))
+        exp_date = payload.expiry_date or (
+            compute_legacy_default_expiry(payload.start_date) if payload.start_date else None
+        )
 
         prop_row = TransactionAppNew(
             TransDate=now_dt,

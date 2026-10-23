@@ -7,6 +7,8 @@ from decimal import Decimal
 from typing import List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.schemas.common_validators import validate_indian_mobile, validate_email_syntax
+
 from app.schemas.quotation import (
     ALLOWED_NCB_SLABS,
     CANONICAL_VEHICLE_CATEGORIES,
@@ -441,6 +443,12 @@ class PolicyBookingCreateRequest(PolicyPreviewRequest):
         description="Test-only fault injection trigger to verify single unit-of-work rollback",
     )
 
+    @model_validator(mode="after")
+    def validate_policy_dates(self) -> "PolicyBookingCreateRequest":
+        if self.expiry_date and self.risk_start_date:
+            if self.expiry_date < self.risk_start_date:
+                raise ValueError("expiry_date cannot be earlier than risk_start_date")
+        return self
 
 
 class PolicyBookingUpdateRequest(BaseModel):
@@ -456,6 +464,13 @@ class PolicyBookingUpdateRequest(BaseModel):
     t_status: Optional[str] = Field(default=None, max_length=100)
     remark: Optional[str] = Field(default=None, max_length=255)
     commission: Optional[CommissionInput] = Field(default=None)
+
+    @model_validator(mode="after")
+    def validate_policy_dates(self) -> "PolicyBookingUpdateRequest":
+        if self.expiry_date and self.risk_start_date:
+            if self.expiry_date < self.risk_start_date:
+                raise ValueError("expiry_date cannot be earlier than risk_start_date")
+        return self
 
 
 class PolicyCancelRequest(BaseModel):
@@ -576,12 +591,32 @@ class PolicyProposalCreateRequest(BaseModel):
     sales_executive_id: Optional[int] = Field(default=None, ge=0)
     franchise_id: Optional[int] = Field(default=None, ge=0)
 
+    @field_validator("contact_no")
+    @classmethod
+    def validate_proposal_contact(cls, v: str) -> str:
+        res = validate_indian_mobile(v)
+        if not res:
+            raise ValueError("Contact number must be a valid 10-digit Indian mobile number")
+        return res
+
+    @field_validator("email_id")
+    @classmethod
+    def validate_proposal_email(cls, v: Optional[str]) -> Optional[str]:
+        return validate_email_syntax(v)
+
     @field_validator("ncb_percent")
     @classmethod
     def validate_proposal_ncb(cls, v: Decimal) -> Decimal:
         if v not in ALLOWED_NCB_SLABS:
             raise ValueError(f"Invalid NCB slab {v}%. Allowed slabs: 0, 20, 25, 35, 45, 50")
         return v
+
+    @model_validator(mode="after")
+    def validate_proposal_dates(self) -> "PolicyProposalCreateRequest":
+        if self.expiry_date and self.start_date:
+            if self.expiry_date < self.start_date:
+                raise ValueError("expiry_date cannot be earlier than start_date")
+        return self
 
 
 class PolicyProposalApprovalRequest(BaseModel):

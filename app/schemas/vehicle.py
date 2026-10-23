@@ -64,6 +64,8 @@ class VehicleCreate(VehicleBase):
     Matches legacy Sp_VehicleDetails_2026 contract.
     FinancialYear is strictly REQUIRED (physical NOT NULL in tbl_vehicledetails).
     """
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
+
     financial_year: str = Field(..., min_length=1, max_length=255, validation_alias=AliasChoices("FinancialYear", "financial_year"))
 
     @field_validator("financial_year", mode="before")
@@ -83,7 +85,7 @@ class VehicleUpdate(BaseModel):
     Matches legacy Sp_UpdateVehicleDetails allowlist.
     Immutable fields: CustomerId, FinancialYear, BranchId, CorporateClientId, VehicleVariant, CreateDate, CreatedUser, isdeleted.
     """
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
 
     registration_no: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("RegistrationNo", "registration_no"))
     chaise_no: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("ChaiseNo", "chaise_no", "chassis_no"))

@@ -117,6 +117,12 @@ class PaymentReversalRequest(BaseModel):
         description="Test-only fault injection hook for atomic rollback verification",
     )
 
+    @model_validator(mode="after")
+    def validate_wallet_refund_fields(self) -> "PaymentReversalRequest":
+        if (self.wallet_owner_type and not self.wallet_owner_id) or (self.wallet_owner_id and not self.wallet_owner_type):
+            raise ValueError("Both wallet_owner_type and wallet_owner_id must be provided together")
+        return self
+
 
 class PaymentLifecycleActionResponse(BaseModel):
     """Response returned after a payment or cheque lifecycle transition."""

@@ -3,7 +3,9 @@ Pydantic Schemas for Phase 16B — User Management, Account Lifecycle & Role Dir
 """
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.schemas.common_validators import validate_indian_mobile
 
 
 class UserBase(BaseModel):
@@ -13,6 +15,11 @@ class UserBase(BaseModel):
     isappuser: Optional[str] = "0"
     partner_user_id: Optional[str] = None
     mobile_no: Optional[str] = None
+
+    @field_validator("mobile_no")
+    @classmethod
+    def validate_mobile(cls, v: Optional[str]) -> Optional[str]:
+        return validate_indian_mobile(v)
 
 
 class UserCreate(UserBase):
@@ -25,6 +32,11 @@ class UserUpdate(BaseModel):
     isappuser: Optional[str] = None
     partner_user_id: Optional[str] = None
     mobile_no: Optional[str] = None
+
+    @field_validator("mobile_no")
+    @classmethod
+    def validate_mobile(cls, v: Optional[str]) -> Optional[str]:
+        return validate_indian_mobile(v)
 
 
 class UserPasswordResetRequest(BaseModel):

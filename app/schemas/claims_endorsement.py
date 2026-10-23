@@ -3,6 +3,8 @@ from decimal import Decimal
 from typing import Any, Dict, Generic, List, Literal, Optional, TypeVar
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.schemas.common_validators import validate_indian_mobile
+
 T = TypeVar("T")
 
 
@@ -160,6 +162,11 @@ class ClaimSurveyUpdateRequest(BaseModel):
     survey_date: Optional[datetime] = None
     remarks: Optional[str] = Field(default=None, max_length=1000)
 
+    @field_validator("surveyor_mobile")
+    @classmethod
+    def validate_surveyor_mobile(cls, v: Optional[str]) -> Optional[str]:
+        return validate_indian_mobile(v)
+
 
 class ClaimAssessmentRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -170,6 +177,20 @@ class ClaimAssessmentRequest(BaseModel):
     excess_amount: Decimal = Field(default=Decimal("0.00"), ge=Decimal("0.00"))
     salvage_amount: Decimal = Field(default=Decimal("0.00"), ge=Decimal("0.00"))
     remarks: Optional[str] = Field(default=None, max_length=1000)
+
+    @model_validator(mode="after")
+    def validate_deductions_within_loss(self) -> "ClaimAssessmentRequest":
+        total_deductions = (
+            self.depreciation_amount
+            + self.deductible_amount
+            + self.excess_amount
+            + self.salvage_amount
+        )
+        if total_deductions > self.assessed_loss_amount:
+            raise ValueError(
+                f"Total deductions ({total_deductions}) cannot exceed assessed loss amount ({self.assessed_loss_amount})"
+            )
+        return self
 
 
 class ClaimApprovalRequest(BaseModel):

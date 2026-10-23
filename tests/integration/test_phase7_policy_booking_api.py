@@ -480,6 +480,49 @@ async def test_subsequent_payment_update_and_cancellation_reverses_all_rows(
     assert upd_resp.status_code == 200
     assert upd_resp.json()["policy_no"] == "TEST_POLICY_UPD_001"
 
+    # 4b. Partial update rollback verification: expiry_date before persisted risk_start_date
+    cur_pol = (await async_client.get(f"/api/v1/policies/{tx_id}", headers=op_headers)).json()
+    orig_expiry = cur_pol["expiry_date"]
+    orig_remark = cur_pol["remark"]
+
+    inv_upd1 = await async_client.put(
+        f"/api/v1/policies/{tx_id}",
+        headers=op_headers,
+        json={"expiry_date": "2020-01-01", "remark": "INVALID_EXPIRY_REMARK"},
+    )
+    assert inv_upd1.status_code == 400
+    assert "Policy ExpiryDate cannot be earlier than RiskStartdate" in inv_upd1.json()["error"]["message"]
+
+    # Verify database state was rolled back (persisted dates and remark unchanged)
+    chk1 = (await async_client.get(f"/api/v1/policies/{tx_id}", headers=op_headers)).json()
+    assert chk1["expiry_date"] == orig_expiry
+    assert chk1["remark"] == orig_remark
+
+    # 4c. Partial update rollback verification: risk_start_date after persisted expiry_date
+    inv_upd2 = await async_client.put(
+        f"/api/v1/policies/{tx_id}",
+        headers=op_headers,
+        json={"risk_start_date": "2035-01-01", "remark": "INVALID_START_REMARK"},
+    )
+    assert inv_upd2.status_code == 400
+    assert "Policy ExpiryDate cannot be earlier than RiskStartdate" in inv_upd2.json()["error"]["message"]
+
+    # Verify database state was rolled back
+    chk2 = (await async_client.get(f"/api/v1/policies/{tx_id}", headers=op_headers)).json()
+    assert chk2["risk_start_date"] == cur_pol["risk_start_date"]
+    assert chk2["remark"] == orig_remark
+
+    # 4d. Same-day expiry update (equality boundary allowed for commercial transit)
+    sameday_upd = await async_client.put(
+        f"/api/v1/policies/{tx_id}",
+        headers=op_headers,
+        json={"risk_start_date": "2026-06-01", "expiry_date": "2026-06-01", "remark": "Transit Policy"},
+    )
+    assert sameday_upd.status_code == 200
+    assert sameday_upd.json()["risk_start_date"].startswith("2026-06-01")
+    assert sameday_upd.json()["expiry_date"].startswith("2026-06-01")
+    assert sameday_upd.json()["remark"] == "Transit Policy"
+
     # 5. Operator cannot cancel policy (only ADMIN/OWNER/ACCOUNT/IT SUPPORT) -> 403
     op_cancel = await async_client.post(
         f"/api/v1/policies/{tx_id}/cancel",

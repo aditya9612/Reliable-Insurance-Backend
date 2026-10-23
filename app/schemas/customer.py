@@ -2,6 +2,14 @@ from datetime import datetime, date
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, AliasChoices, field_validator
 
+from app.schemas.common_validators import (
+    validate_indian_mobile,
+    validate_pan,
+    validate_aadhaar,
+    validate_pin_code,
+    validate_email_syntax,
+)
+
 
 class CustomerBase(BaseModel):
     """Base schema attributes for Customer."""
@@ -25,11 +33,11 @@ class CustomerBase(BaseModel):
     com_district_id: Optional[int] = Field(0, validation_alias=AliasChoices("ComDistrictId", "com_district_id"))
     com_state_id: Optional[int] = Field(0, validation_alias=AliasChoices("ComStateId", "com_state_id"))
     com_pin_code: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("ComPinCode", "com_pin_code"))
-    moblie_no1: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("MoblieNo1", "moblie_no1", "mobile_no1"))
-    moblie_no2: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("MoblieNo2", "moblie_no2", "mobile_no2"))
+    moblie_no1: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("MoblieNo1", "moblie_no1", "mobile_no1", "MobileNo1", "MobileNo", "mobile_no"))
+    moblie_no2: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("MoblieNo2", "moblie_no2", "mobile_no2", "MobileNo2"))
     gender: Optional[str] = Field("Male", max_length=255, validation_alias=AliasChoices("Gender", "gender"))
     marital_status: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("MaritalStatus", "marital_status"))
-    pan_no: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("PAN_No", "pan_no"))
+    pan_no: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("PAN_No", "pan_no", "PanNo", "PANNo"))
     aadhar_no: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("AadharNo", "aadhar_no"))
     date_of_birth: Optional[date] = Field(None, validation_alias=AliasChoices("DateOfBirth", "date_of_birth"))
     email_id: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("EMailId", "email_id"))
@@ -75,6 +83,34 @@ class CustomerBase(BaseModel):
             return v_stripped if v_stripped else None
         return v
 
+    @field_validator("moblie_no1", "moblie_no2")
+    @classmethod
+    def validate_customer_mobile(cls, v: Optional[str]) -> Optional[str]:
+        return validate_indian_mobile(v)
+
+    @field_validator("pan_no")
+    @classmethod
+    def validate_customer_pan(cls, v: Optional[str]) -> Optional[str]:
+        return validate_pan(v)
+
+    @field_validator("aadhar_no")
+    @classmethod
+    def validate_customer_aadhaar(cls, v: Optional[str]) -> Optional[str]:
+        return validate_aadhaar(v)
+
+    @field_validator("per_pin_code", "com_pin_code")
+    @classmethod
+    def validate_customer_pin(cls, v: Optional[str]) -> Optional[str]:
+        return validate_pin_code(v)
+
+    @field_validator("email_id")
+    @classmethod
+    def validate_customer_email(cls, v: Optional[str]) -> Optional[str]:
+        if not v:
+            return None
+        validate_email_syntax(v)
+        return str(v).strip().upper()
+
 
 class CustomerCreate(CustomerBase):
     """
@@ -82,6 +118,8 @@ class CustomerCreate(CustomerBase):
     Matches legacy sp_InsertCustomer contract.
     CustomerCode is optional; if omitted, service generates it atomically from AUTO_INCREMENT CustomerId.
     """
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
+
     customer_code: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("CustomerCode", "customer_code"))
 
 
@@ -91,7 +129,7 @@ class CustomerUpdate(BaseModel):
     Matches legacy sp_UpdateCustomer allowlist.
     Immutable fields: CustomerId, CustomerCode, CreateDate, CreateUser, CompanyName, isdeleted.
     """
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
 
     initial: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("initial", "Initial"))
     cust_f_name: Optional[str] = Field(None, min_length=1, max_length=300, validation_alias=AliasChoices("CustFName", "cust_f_name"))
@@ -111,11 +149,11 @@ class CustomerUpdate(BaseModel):
     com_district_id: Optional[int] = Field(None, validation_alias=AliasChoices("ComDistrictId", "com_district_id"))
     com_state_id: Optional[int] = Field(None, validation_alias=AliasChoices("ComStateId", "com_state_id"))
     com_pin_code: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("ComPinCode", "com_pin_code"))
-    moblie_no1: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("MoblieNo1", "moblie_no1", "mobile_no1"))
-    moblie_no2: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("MoblieNo2", "moblie_no2", "mobile_no2"))
+    moblie_no1: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("MoblieNo1", "moblie_no1", "mobile_no1", "MobileNo1", "MobileNo", "mobile_no"))
+    moblie_no2: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("MoblieNo2", "moblie_no2", "mobile_no2", "MobileNo2"))
     gender: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("Gender", "gender"))
     marital_status: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("MaritalStatus", "marital_status"))
-    pan_no: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("PAN_No", "pan_no"))
+    pan_no: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("PAN_No", "pan_no", "PanNo", "PANNo"))
     aadhar_no: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("AadharNo", "aadhar_no"))
     date_of_birth: Optional[date] = Field(None, validation_alias=AliasChoices("DateOfBirth", "date_of_birth"))
     email_id: Optional[str] = Field(None, max_length=255, validation_alias=AliasChoices("EMailId", "email_id"))
@@ -159,6 +197,34 @@ class CustomerUpdate(BaseModel):
             v_stripped = v.strip()
             return v_stripped if v_stripped else None
         return v
+
+    @field_validator("moblie_no1", "moblie_no2")
+    @classmethod
+    def validate_customer_mobile(cls, v: Optional[str]) -> Optional[str]:
+        return validate_indian_mobile(v)
+
+    @field_validator("pan_no")
+    @classmethod
+    def validate_customer_pan(cls, v: Optional[str]) -> Optional[str]:
+        return validate_pan(v)
+
+    @field_validator("aadhar_no")
+    @classmethod
+    def validate_customer_aadhaar(cls, v: Optional[str]) -> Optional[str]:
+        return validate_aadhaar(v)
+
+    @field_validator("per_pin_code", "com_pin_code")
+    @classmethod
+    def validate_customer_pin(cls, v: Optional[str]) -> Optional[str]:
+        return validate_pin_code(v)
+
+    @field_validator("email_id")
+    @classmethod
+    def validate_customer_email(cls, v: Optional[str]) -> Optional[str]:
+        if not v:
+            return None
+        validate_email_syntax(v)
+        return str(v).strip().upper()
 
 
 class CustomerResponse(BaseModel):

@@ -2,8 +2,11 @@
 Pydantic v2 Schemas for Phase 13 Block E — Renewal Engine & Telecaller CRM.
 """
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional, List, Dict
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+
+from app.schemas.common_validators import validate_indian_mobile
 
 
 class ExpiringPolicyResponse(BaseModel):
@@ -35,9 +38,14 @@ class CreateRenewalFollowupRequest(BaseModel):
     remark: str = Field(..., min_length=1, max_length=2000)
     followup_date: datetime
     insurance_company: Optional[str] = None
-    total_premium: float = 0.0
+    total_premium: Decimal = Field(default=Decimal("0.00"), ge=Decimal("0.00"))
     mobile_number: Optional[str] = None
     expiry_date: Optional[datetime] = None
+
+    @field_validator("mobile_number")
+    @classmethod
+    def validate_mobile(cls, v: Optional[str]) -> Optional[str]:
+        return validate_indian_mobile(v)
 
 
 class UpdateRenewalStatusRequest(BaseModel):
