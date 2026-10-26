@@ -1132,8 +1132,13 @@ class PolicyBookingService:
             branch_id=branch_id,
         )
 
-        t_status = "Booked" if pay_summary.is_complete_payment == 1 else "Pending"
-        pending_status = 0 if pay_summary.is_complete_payment == 1 else 1
+        has_cheque = any(p.payment_type in {"CHEQUE", "DD"} for p in payload.payments)
+        if has_cheque:
+            t_status = "Pending"
+            pending_status = 1
+        else:
+            t_status = "Booked" if pay_summary.is_complete_payment == 1 else "Pending"
+            pending_status = 0 if pay_summary.is_complete_payment == 1 else 1
 
         return PolicyPreviewResponse(
             source_type=source_type,
@@ -1365,9 +1370,13 @@ class PolicyBookingService:
                 exp_date = payload.expiry_date or compute_legacy_default_expiry(payload.risk_start_date)
                 exp_dt = datetime.combine(exp_date, datetime.min.time())
 
-                t_status = "Booked" if pay_summary.is_complete_payment == 1 else "Pending"
-                pending_status = 0 if pay_summary.is_complete_payment == 1 else 1
                 has_cheque = any(p.payment_type in {"CHEQUE", "DD"} for p in payload.payments)
+                if has_cheque:
+                    t_status = "Pending"
+                    pending_status = 1
+                else:
+                    t_status = "Booked" if pay_summary.is_complete_payment == 1 else "Pending"
+                    pending_status = 0 if pay_summary.is_complete_payment == 1 else 1
 
                 # 5c. Insert tbl_transaction
                 tx_row = Transaction(
@@ -2001,6 +2010,31 @@ class PolicyBookingService:
             items=items,
         )
 
+    async def _has_uncleared_cheque_instruments(self, tx: Transaction) -> bool:
+        """
+        Determines whether the transaction has any active Cheque or DD payment instrument
+        that has not yet cleared the bank, or is currently in clearing/bounce hold.
+        Safely ignores transactions whose payments are exclusively non-cheque (Cash, NEFT, Online, E-Wallet).
+        """
+        if (tx.Ischequeclearing or 0) == 1 or (tx.ChequeBankStatus or 0) == 2:
+            return True
+        active_payments = await self.repo.get_payments_by_transaction_id(
+            tx.TransanctionId, include_deleted=False
+        )
+        chq_payments = [
+            p
+            for p in active_payments
+            if (p.PaymentType or "").strip().upper() in {"CHEQUE", "DD"}
+        ]
+        if chq_payments:
+            if any(
+                p.AccountantApproval != 1
+                or (p.Extra1 or "").strip().upper() != "CLEARED"
+                for p in chq_payments
+            ) or (tx.IsChequeCleared or 0) == 0:
+                return True
+        return False
+
     async def update_policy(
         self,
         transaction_id: int,
@@ -2017,7 +2051,18 @@ class PolicyBookingService:
 
         async with _BOOKING_WRITE_LOCK:
             try:
+                has_uncleared = await self._has_uncleared_cheque_instruments(tx)
                 if payload.policy_no is not None and payload.policy_no.strip() != (tx.PolicyNo or ""):
+                    if has_uncleared:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Cannot assign or update PolicyNo: Cheque/DD payment is pending bank clearance.",
+                        )
+                    if round_2dp(_to_decimal(tx.OutstandingAmount)) > ZERO:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"Cannot assign or update PolicyNo: Policy has an outstanding balance of {tx.OutstandingAmount}.",
+                        )
                     dup = await self.repo.get_active_by_policy_no(
                         policy_no=payload.policy_no,
                         insurance_company_id=tx.InsuranceCompanyId or 1,
@@ -2041,7 +2086,19 @@ class PolicyBookingService:
                     tx.ExpiryDate = exp_dt
                     tx.DeuDate = exp_dt
                 if payload.t_status is not None:
-                    tx.TStatus = payload.t_status.strip()
+                    target_status = payload.t_status.strip()
+                    if target_status.lower() in {"booked", "issued", "approved"}:
+                        if has_uncleared:
+                            raise HTTPException(
+                                status_code=status.HTTP_400_BAD_REQUEST,
+                                detail=f"Cannot transition policy to '{target_status}': Cheque/DD payment is pending bank clearance.",
+                            )
+                        if round_2dp(_to_decimal(tx.OutstandingAmount)) > ZERO:
+                            raise HTTPException(
+                                status_code=status.HTTP_400_BAD_REQUEST,
+                                detail=f"Cannot transition policy to '{target_status}': Policy has an outstanding balance of {tx.OutstandingAmount}.",
+                            )
+                    tx.TStatus = target_status
                 if payload.remark is not None:
                     tx.Remark = payload.remark
 
@@ -2145,29 +2202,44 @@ class PolicyBookingService:
                     tx.Ischequeclearing = 1
                     tx.IsChequeCleared = 0
                     tx.ChequeBankStatus = 0
-                if is_complete == 1:
+
+                existing_payments = await self.repo.get_payments_by_transaction_id(
+                    tx.TransanctionId, include_deleted=False
+                )
+                has_uncleared_existing_cheque = any(
+                    (p.PaymentType or "").strip().upper() in {"CHEQUE", "DD"}
+                    and (p.AccountantApproval != 1 or (p.Extra1 or "").strip().upper() != "CLEARED")
+                    for p in existing_payments
+                )
+
+                if is_complete == 1 and not is_cheque_like and not has_uncleared_existing_cheque and (tx.Ischequeclearing or 0) == 0:
                     tx.TStatus = "Booked"
                     tx.pendingStatus = 0
                     tx.RAPaymentStatus = "COMPLETE"
                     tx.IsActivePendingCash = 0
-                    if (tx.Ischequeclearing or 0) == 0:
-                        if tx.ChequeBankStatus == 2:
-                            tx.ChequeBankStatus = 0
-                        cnp_rows = await self.repo.get_cutnpay_by_tx(tx.TransanctionId)
-                        for cnp in cnp_rows:
-                            if (cnp.Flag or "").upper().startswith("HOLD"):
-                                cnp.Flag = "CUTNPAY"
-                        acp_rows = await self.repo.get_agent_comm_payments_by_tx(tx.TransanctionId)
-                        for acp in acp_rows:
-                            if (acp.Narration or "").upper().startswith("HOLD:"):
-                                adv_v = round_2dp(_to_decimal(acp.AdvAmt))
-                                rem_v = round_2dp(_to_decimal(acp.NetAmount))
-                                acp.PaymentStatus = (
-                                    Decimal("1.00")
-                                    if (adv_v > ZERO and rem_v == ZERO)
-                                    else (Decimal("2.00") if adv_v > ZERO else ZERO)
-                                )
-                                acp.Narration = f"Commission Payable Active - {tx.InwardNo}"[:255]
+                    if tx.ChequeBankStatus == 2:
+                        tx.ChequeBankStatus = 0
+                        tx.IsChequeCleared = 1
+                    cnp_rows = await self.repo.get_cutnpay_by_tx(tx.TransanctionId)
+                    for cnp in cnp_rows:
+                        if (cnp.Flag or "").upper().startswith("HOLD"):
+                            cnp.Flag = "CUTNPAY"
+                    acp_rows = await self.repo.get_agent_comm_payments_by_tx(tx.TransanctionId)
+                    for acp in acp_rows:
+                        if (acp.Narration or "").upper().startswith("HOLD:"):
+                            adv_v = round_2dp(_to_decimal(acp.AdvAmt))
+                            rem_v = round_2dp(_to_decimal(acp.NetAmount))
+                            acp.PaymentStatus = (
+                                Decimal("1.00")
+                                if (adv_v > ZERO and rem_v == ZERO)
+                                else (Decimal("2.00") if adv_v > ZERO else ZERO)
+                            )
+                            acp.Narration = f"Commission Payable Active - {tx.InwardNo}"[:255]
+                elif is_complete == 1 and (is_cheque_like or has_uncleared_existing_cheque or (tx.Ischequeclearing or 0) == 1):
+                    tx.TStatus = "Pending"
+                    tx.pendingStatus = 1
+                    tx.RAPaymentStatus = "PENDING_CLEARANCE"
+                    tx.IsChequeCleared = 0
                 if payload.payment_type == "EWALLET":
                     tx.EWalletAmountUsed = round_2dp(
                         _to_decimal(tx.EWalletAmountUsed) + add_amount

@@ -9,11 +9,12 @@ from decimal import Decimal
 from typing import Optional, Tuple
 import pytest
 from httpx import AsyncClient
-from sqlalchemy import text
+from sqlalchemy import text, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token, get_password_hash
 from app.models.customer import Customer
+from app.models.transaction import Transaction
 from app.models.user import User, UserRole
 from app.models.vehicle import VehicleDetails
 from app.repositories.role import RoleRepository
@@ -549,3 +550,477 @@ async def test_subsequent_payment_update_and_cancellation_reverses_all_rows(
     # 7. Cancelled policy returns 404 on active GET
     get_after = await async_client.get(f"/api/v1/policies/{tx_id}", headers=admin_headers)
     assert get_after.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_p0_cheque_dd_underwriting_integrity_and_issuance_gates(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+):
+    """
+    P0 Financial & Underwriting Integrity Gate Verification:
+    1. Uncleared Cheque/DD policies cannot be marked 'Booked' or 'Issued' at booking or via update.
+    2. PolicyNo assignment/update is blocked while Cheque/DD is pending clearance or balance is unpaid.
+    3. Rejection rolls back transaction atomicity cleanly.
+    4. Bank clearance unlocks 'Booked' status and enables PolicyNo issuance.
+    5. Partial payments with unpaid balances cannot be issued until fully settled.
+    """
+    _, op_headers = await create_user_with_role(db_session, role_name="OPERATOR", branch_id=101)
+    _, acc_headers = await create_user_with_role(db_session, role_name="ACCOUNT", branch_id=101)
+    cust, veh = await create_synthetic_customer_and_vehicle(db_session, branch_id=101, reg_no="MH12P0GATE01")
+
+    # 1. Booking with full premium paid by CHEQUE -> Must remain 'Pending', pendingStatus=1
+    book_chq = await async_client.post(
+        "/api/v1/policies/book",
+        headers=op_headers,
+        json={
+            "customer_id": cust.CustomerId,
+            "cust_veh_id": veh.CustVehId,
+            "vehicle_category": "PVT",
+            "od_premium": "6000.00",
+            "tp_premium": "4000.00",
+            "commission": {"agent_id": 401, "franchise_id": 601, "agent_comm_od_percent": "10.00"},
+            "payments": [
+                {
+                    "payment_type": "CHEQUE",
+                    "paid_amount": "11800.00",
+                    "docno": "CHQ-P0-001",
+                    "bankname": "AXIS BANK",
+                }
+            ],
+        },
+    )
+    assert book_chq.status_code == 201
+    chq_data = book_chq.json()
+    tx_id = chq_data["transaction_id"]
+    pay_id = chq_data["payment_summary"]["payments"][0]["payment_id"]
+    assert chq_data["t_status"] == "Pending"
+    assert chq_data["pending_status"] == 1
+    assert chq_data["policy_no"] is None
+
+    # 2. Attempting to transition status to 'Booked' or 'Issued' on uncleared cheque -> 400 Bad Request
+    upd_status_booked = await async_client.put(
+        f"/api/v1/policies/{tx_id}",
+        headers=op_headers,
+        json={"t_status": "Booked", "remark": "Premature Booked Transition"},
+    )
+    assert upd_status_booked.status_code == 400
+    assert "Cheque/DD payment is pending bank clearance" in upd_status_booked.json()["error"]["message"]
+
+    upd_status_issued = await async_client.put(
+        f"/api/v1/policies/{tx_id}",
+        headers=op_headers,
+        json={"t_status": "Issued", "remark": "Premature Issued Transition"},
+    )
+    assert upd_status_issued.status_code == 400
+    assert "Cheque/DD payment is pending bank clearance" in upd_status_issued.json()["error"]["message"]
+
+    # 3. Attempting to assign PolicyNo on uncleared cheque -> 400 Bad Request
+    upd_polno = await async_client.put(
+        f"/api/v1/policies/{tx_id}",
+        headers=op_headers,
+        json={"policy_no": "PREMATURE-POL-001", "remark": "Premature PolicyNo"},
+    )
+    assert upd_polno.status_code == 400
+    assert "Cheque/DD payment is pending bank clearance" in upd_polno.json()["error"]["message"]
+
+    # 4. Verify transaction rollback (status and policy_no remain unchanged in DB)
+    cur_tx = (await async_client.get(f"/api/v1/policies/{tx_id}", headers=op_headers)).json()
+    assert cur_tx["t_status"] == "Pending"
+    assert cur_tx["pending_status"] == 1
+    assert cur_tx["policy_no"] is None
+    assert cur_tx["remark"] is None
+
+    # 5. Deposited but uncleared cheque is still blocked
+    dep_resp = await async_client.post(
+        f"/api/v1/payments/{pay_id}/deposit",
+        headers=acc_headers,
+        json={"bank_reference": "DEP-SLIP-P0-001"},
+    )
+    assert dep_resp.status_code == 200
+
+    upd_after_dep = await async_client.put(
+        f"/api/v1/policies/{tx_id}",
+        headers=op_headers,
+        json={"policy_no": "PREMATURE-POL-DEP-001"},
+    )
+    assert upd_after_dep.status_code == 400
+    assert "Cheque/DD payment is pending bank clearance" in upd_after_dep.json()["error"]["message"]
+
+    # 6. Clearance releases the gate: transitions policy to 'Booked' and allows PolicyNo assignment
+    clr_resp = await async_client.post(
+        f"/api/v1/payments/{pay_id}/clear",
+        headers=acc_headers,
+        json={"bank_reference": "CLR-UTR-P0-001"},
+    )
+    assert clr_resp.status_code == 200
+    assert clr_resp.json()["policy_t_status"] == "Booked"
+    assert clr_resp.json()["policy_pending_status"] == 0
+
+    upd_after_clr = await async_client.put(
+        f"/api/v1/policies/{tx_id}",
+        headers=op_headers,
+        json={"policy_no": "VALID-ISSUED-POL-001", "remark": "Policy Schedule Issued After Clearance"},
+    )
+    assert upd_after_clr.status_code == 200
+    assert upd_after_clr.json()["policy_no"] == "VALID-ISSUED-POL-001"
+    assert upd_after_clr.json()["t_status"] == "Booked"
+
+    # 7. Demand Draft (DD) Gate Verification
+    cust_dd, veh_dd = await create_synthetic_customer_and_vehicle(db_session, branch_id=101, reg_no="MH12P0DD01")
+    book_dd = await async_client.post(
+        "/api/v1/policies/book",
+        headers=op_headers,
+        json={
+            "customer_id": cust_dd.CustomerId,
+            "cust_veh_id": veh_dd.CustVehId,
+            "vehicle_category": "PVT",
+            "od_premium": "6000.00",
+            "tp_premium": "4000.00",
+            "commission": {"agent_id": 401, "franchise_id": 601, "agent_comm_od_percent": "10.00"},
+            "payments": [
+                {
+                    "payment_type": "DD",
+                    "paid_amount": "11800.00",
+                    "docno": "DD-P0-001",
+                    "bankname": "SBI",
+                }
+            ],
+        },
+    )
+    assert book_dd.status_code == 201
+    assert book_dd.json()["t_status"] == "Pending"
+    tx_dd_id = book_dd.json()["transaction_id"]
+
+    dd_blocked = await async_client.put(
+        f"/api/v1/policies/{tx_dd_id}",
+        headers=op_headers,
+        json={"t_status": "Booked"},
+    )
+    assert dd_blocked.status_code == 400
+    assert "Cheque/DD payment is pending bank clearance" in dd_blocked.json()["error"]["message"]
+
+    # 8. Unpaid Balance Gate Verification (Partial Cash)
+    cust_pt, veh_pt = await create_synthetic_customer_and_vehicle(db_session, branch_id=101, reg_no="MH12P0PART01")
+    book_partial = await async_client.post(
+        "/api/v1/policies/book",
+        headers=op_headers,
+        json={
+            "customer_id": cust_pt.CustomerId,
+            "cust_veh_id": veh_pt.CustVehId,
+            "vehicle_category": "PVT",
+            "od_premium": "6000.00",
+            "tp_premium": "4000.00",
+            "commission": {"agent_id": 401, "franchise_id": 601, "agent_comm_od_percent": "10.00"},
+            "payments": [{"payment_type": "CASH", "paid_amount": "5000.00"}],
+        },
+    )
+    assert book_partial.status_code == 201
+    tx_pt_id = book_partial.json()["transaction_id"]
+    assert book_partial.json()["t_status"] == "Pending"
+
+    part_polno_blocked = await async_client.put(
+        f"/api/v1/policies/{tx_pt_id}",
+        headers=op_headers,
+        json={"policy_no": "PARTIAL-UNPAID-POL-001"},
+    )
+    assert part_polno_blocked.status_code == 400
+    assert "Policy has an outstanding balance of" in part_polno_blocked.json()["error"]["message"]
+
+    part_status_blocked = await async_client.put(
+        f"/api/v1/policies/{tx_pt_id}",
+        headers=op_headers,
+        json={"t_status": "Booked"},
+    )
+    assert part_status_blocked.status_code == 400
+    assert "Policy has an outstanding balance of" in part_status_blocked.json()["error"]["message"]
+
+
+@pytest.mark.asyncio
+async def test_p0_risk_a_valid_cash_neft_settlement_allows_issuance(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    """
+    Forensic Edge-Case Risk A Audit:
+    Ensure valid non-cheque transactions (CASH, NEFT) are never falsely blocked
+    from policy number assignment or status transitions, even if the database
+    clearing flag IsChequeCleared is 0 or absent.
+    """
+    _, op_headers = await create_user_with_role(
+        db_session, role_name="OPERATOR", branch_id=101
+    )
+
+    # 1. 100% Cash Policy Booking
+    cust_cash, veh_cash = await create_synthetic_customer_and_vehicle(
+        db_session, branch_id=101, reg_no="MH12P0RISKA01"
+    )
+    book_cash = await async_client.post(
+        "/api/v1/policies/book",
+        headers=op_headers,
+        json={
+            "customer_id": cust_cash.CustomerId,
+            "cust_veh_id": veh_cash.CustVehId,
+            "vehicle_category": "PVT",
+            "od_premium": "6000.00",
+            "tp_premium": "4000.00",
+            "commission": {"agent_id": 401, "franchise_id": 601, "agent_comm_od_percent": "10.00"},
+            "payments": [{"payment_type": "CASH", "paid_amount": "11800.00"}],
+        },
+    )
+    assert book_cash.status_code == 201
+    tx_cash_id = book_cash.json()["transaction_id"]
+    assert book_cash.json()["t_status"] == "Booked"
+    assert book_cash.json()["pending_status"] == 0
+
+    # Simulate legacy database default where IsChequeCleared is 0 for Cash
+    await db_session.rollback()
+    tx_model = (await db_session.execute(
+        select(Transaction).where(Transaction.TransanctionId == tx_cash_id)
+    )).scalar_one()
+    tx_model.IsChequeCleared = 0
+    await db_session.commit()
+
+    # Risk A Verification: Cash transaction with zero balance and zero cheques MUST NOT BE BLOCKED
+    upd_cash = await async_client.put(
+        f"/api/v1/policies/{tx_cash_id}",
+        headers=op_headers,
+        json={"policy_no": "CASH-POL-RISKA-001", "t_status": "Issued"},
+    )
+    assert upd_cash.status_code == 200
+    assert upd_cash.json()["policy_no"] == "CASH-POL-RISKA-001"
+    assert upd_cash.json()["t_status"] == "Issued"
+
+    # 2. 100% NEFT Policy Booking
+    cust_neft, veh_neft = await create_synthetic_customer_and_vehicle(
+        db_session, branch_id=101, reg_no="MH12P0RISKANEFT"
+    )
+    book_neft = await async_client.post(
+        "/api/v1/policies/book",
+        headers=op_headers,
+        json={
+            "customer_id": cust_neft.CustomerId,
+            "cust_veh_id": veh_neft.CustVehId,
+            "vehicle_category": "PVT",
+            "od_premium": "6000.00",
+            "tp_premium": "4000.00",
+            "commission": {"agent_id": 401, "franchise_id": 601, "agent_comm_od_percent": "10.00"},
+            "payments": [{"payment_type": "NEFT", "paid_amount": "11800.00", "docno": "NEFT-UTR-001"}],
+        },
+    )
+    assert book_neft.status_code == 201
+    tx_neft_id = book_neft.json()["transaction_id"]
+
+    upd_neft = await async_client.put(
+        f"/api/v1/policies/{tx_neft_id}",
+        headers=op_headers,
+        json={"policy_no": "NEFT-POL-RISKA-002", "t_status": "Approved"},
+    )
+    assert upd_neft.status_code == 200
+    assert upd_neft.json()["policy_no"] == "NEFT-POL-RISKA-002"
+    assert upd_neft.json()["t_status"] == "Approved"
+
+
+@pytest.mark.asyncio
+async def test_p0_risk_b_mixed_instruments_supplemental_cash_cannot_clear_pending_cheque(
+    async_client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    """
+    Forensic Edge-Case Risk B Audit:
+    Ensure supplemental non-cheque payments (CASH) that settle an outstanding balance
+    do NOT prematurely transition policy to 'Booked' or clear IsChequeCleared when
+    an uncleared Cheque/DD remains on the policy.
+    """
+    _, op_headers = await create_user_with_role(
+        db_session, role_name="OPERATOR", branch_id=101
+    )
+    _, acc_headers = await create_user_with_role(
+        db_session, role_name="ACCOUNT", branch_id=101
+    )
+
+    # 1. Initial booking with mixed instruments: CHEQUE (₹5,000) + CASH (₹5,000)
+    # Total premium = ₹11,800. Outstanding = ₹1,800.
+    cust, veh = await create_synthetic_customer_and_vehicle(
+        db_session, branch_id=101, reg_no="MH12P0RISKB01"
+    )
+    book_resp = await async_client.post(
+        "/api/v1/policies/book",
+        headers=op_headers,
+        json={
+            "customer_id": cust.CustomerId,
+            "cust_veh_id": veh.CustVehId,
+            "vehicle_category": "PVT",
+            "od_premium": "6000.00",
+            "tp_premium": "4000.00",
+            "commission": {"agent_id": 401, "franchise_id": 601, "agent_comm_od_percent": "10.00"},
+            "payments": [
+                {
+                    "payment_type": "CHEQUE",
+                    "paid_amount": "5000.00",
+                    "docno": "CHQ-RISKB-001",
+                    "bankname": "HDFC",
+                },
+                {
+                    "payment_type": "CASH",
+                    "paid_amount": "5000.00",
+                },
+            ],
+        },
+    )
+    assert book_resp.status_code == 201
+    tx_id = book_resp.json()["transaction_id"]
+    payments = book_resp.json()["payment_summary"]["payments"]
+    assert len(payments) == 2
+    cheque_pay = next(p for p in payments if p["payment_type"] == "CHEQUE")
+    chq_id = cheque_pay["payment_id"]
+    assert book_resp.json()["t_status"] == "Pending"
+    assert book_resp.json()["pending_status"] == 1
+    assert Decimal(str(book_resp.json()["payment_summary"]["outstanding_amount"])) == Decimal("1800.00")
+
+    # 2. Add supplemental CASH payment of ₹1,800 settling the entire remaining balance
+    supp_resp = await async_client.post(
+        f"/api/v1/policies/{tx_id}/payments",
+        headers=op_headers,
+        json={
+            "payment_type": "CASH",
+            "paid_amount": "1800.00",
+            "payment_details": "Settlement of remaining balance via Cash",
+        },
+    )
+    assert supp_resp.status_code == 201
+    assert Decimal(str(supp_resp.json()["payment_summary"]["outstanding_amount"])) == Decimal("0.00")
+
+    # Risk B Verification: Even though outstanding is 0.00 and payment was Cash,
+    # policy MUST REMAIN 'Pending' because CHQ-RISKB-001 is STILL UNCLEARED!
+    assert supp_resp.json()["t_status"] == "Pending"
+    assert supp_resp.json()["pending_status"] == 1
+
+    # Database verification: IsChequeCleared must remain 0
+    await db_session.rollback()
+    tx_row = (await db_session.execute(
+        select(Transaction).where(Transaction.TransanctionId == tx_id)
+    )).scalar_one()
+    assert tx_row.IsChequeCleared == 0
+    assert tx_row.TStatus == "Pending"
+
+    # 3. PolicyNo assignment must STILL be rejected because Cheque is uncleared
+    upd_blocked = await async_client.put(
+        f"/api/v1/policies/{tx_id}",
+        headers=op_headers,
+        json={"policy_no": "BLOCKED-POL-RISKB-001"},
+    )
+    assert upd_blocked.status_code == 400
+    assert "Cheque/DD payment is pending bank clearance" in upd_blocked.json()["error"]["message"]
+
+    # 4. Deposit and Clear the Cheque instrument
+    dep_resp = await async_client.post(
+        f"/api/v1/payments/{chq_id}/deposit",
+        headers=acc_headers,
+        json={"bank_reference": "DEP-SLIP-RISKB-001"},
+    )
+    assert dep_resp.status_code == 200
+
+    clr_resp = await async_client.post(
+        f"/api/v1/payments/{chq_id}/clear",
+        headers=acc_headers,
+        json={"bank_reference": "CLR-UTR-RISKB-001"},
+    )
+    assert clr_resp.status_code == 200
+    assert clr_resp.json()["policy_t_status"] == "Booked"
+    assert clr_resp.json()["policy_pending_status"] == 0
+
+    # 5. Now that cheque has cleared, policy number assignment succeeds
+    upd_success = await async_client.put(
+        f"/api/v1/policies/{tx_id}",
+        headers=op_headers,
+        json={"policy_no": "CLEARED-POL-RISKB-001"},
+    )
+    assert upd_success.status_code == 200
+    assert upd_success.json()["policy_no"] == "CLEARED-POL-RISKB-001"
+    assert upd_success.json()["t_status"] == "Booked"
+
+    # 6. Mixed DD + NEFT Transaction Verification
+    cust_dd, veh_dd = await create_synthetic_customer_and_vehicle(
+        db_session, branch_id=101, reg_no="MH12P0DDNEFT01"
+    )
+    book_dd_neft = await async_client.post(
+        "/api/v1/policies/book",
+        headers=op_headers,
+        json={
+            "customer_id": cust_dd.CustomerId,
+            "cust_veh_id": veh_dd.CustVehId,
+            "vehicle_category": "PVT",
+            "od_premium": "6000.00",
+            "tp_premium": "4000.00",
+            "commission": {"agent_id": 401, "franchise_id": 601, "agent_comm_od_percent": "10.00"},
+            "payments": [
+                {
+                    "payment_type": "DD",
+                    "paid_amount": "6000.00",
+                    "docno": "DD-RISKB-002",
+                    "bankname": "SBI",
+                },
+                {
+                    "payment_type": "NEFT",
+                    "paid_amount": "4000.00",
+                    "docno": "NEFT-RISKB-002",
+                },
+            ],
+        },
+    )
+    assert book_dd_neft.status_code == 201
+    tx_dd_id = book_dd_neft.json()["transaction_id"]
+    dd_payments = book_dd_neft.json()["payment_summary"]["payments"]
+    dd_pay = next(p for p in dd_payments if p["payment_type"] == "DD")
+    dd_pay_id = dd_pay["payment_id"]
+    assert book_dd_neft.json()["t_status"] == "Pending"
+
+    # Add supplemental NEFT payment of 1800.00
+    supp_neft = await async_client.post(
+        f"/api/v1/policies/{tx_dd_id}/payments",
+        headers=op_headers,
+        json={
+            "payment_type": "NEFT",
+            "paid_amount": "1800.00",
+            "docno": "NEFT-SETTLE-003",
+        },
+    )
+    assert supp_neft.status_code == 201
+    assert Decimal(str(supp_neft.json()["payment_summary"]["outstanding_amount"])) == Decimal("0.00")
+    assert supp_neft.json()["t_status"] == "Pending"
+    assert supp_neft.json()["pending_status"] == 1
+
+    # PolicyNo blocked while DD is uncleared
+    upd_dd_blocked = await async_client.put(
+        f"/api/v1/policies/{tx_dd_id}",
+        headers=op_headers,
+        json={"policy_no": "BLOCKED-DD-NEFT-001"},
+    )
+    assert upd_dd_blocked.status_code == 400
+    assert "Cheque/DD payment is pending bank clearance" in upd_dd_blocked.json()["error"]["message"]
+
+    # Clear the DD instrument
+    dep_dd = await async_client.post(
+        f"/api/v1/payments/{dd_pay_id}/deposit",
+        headers=acc_headers,
+        json={"bank_reference": "DEP-SLIP-DD-002"},
+    )
+    assert dep_dd.status_code == 200
+
+    clr_dd = await async_client.post(
+        f"/api/v1/payments/{dd_pay_id}/clear",
+        headers=acc_headers,
+        json={"bank_reference": "CLR-UTR-DD-002"},
+    )
+    assert clr_dd.status_code == 200
+    assert clr_dd.json()["policy_t_status"] == "Booked"
+
+    upd_dd_ok = await async_client.put(
+        f"/api/v1/policies/{tx_dd_id}",
+        headers=op_headers,
+        json={"policy_no": "CLEARED-DD-NEFT-POL-002"},
+    )
+    assert upd_dd_ok.status_code == 200
+    assert upd_dd_ok.json()["policy_no"] == "CLEARED-DD-NEFT-POL-002"
+    assert upd_dd_ok.json()["t_status"] == "Booked"
