@@ -18,11 +18,25 @@ from app.models.profile import Agent, Employee
 from app.models.customer import Customer
 from app.models.ledger import LedgerMaster
 from app.models.account import Account
+from app.models.master import (
+    VehicleType,
+    VehicleMake,
+    VehicleModel,
+    VehicleVariant,
+    RTOMaster,
+    InsuranceCompany,
+)
 from app.schemas.asmx_compat import (
     API_AgentResponse,
     API_AgentNewResponse,
     API_CustomerAppResponse,
     API_EwalletBalanceResponse,
+    API_VehicleTypeResponse,
+    API_VehicleMakeResponse,
+    API_VehicleModelResponse,
+    API_VehicleVariantResponse,
+    API_RTOResponse,
+    API_InsuranceCompanyResponse,
 )
 
 
@@ -120,6 +134,141 @@ def test_api_ewallet_balance_schema_contract():
     assert dumped["Balance"] == 0.0
     assert dumped["EwalletBalance"] == 0.0
     assert dumped["AgentId"] == 0
+
+
+def test_api_vehicle_type_schema_contract():
+    """Verify API_VehicleTypeResponse exact field names, casing, count, and defaults (GAP-P1-003)."""
+    schema = API_VehicleTypeResponse()
+    dumped = schema.model_dump()
+    expected_keys = {
+        "Veh_Type_ID",
+        "Veh_Type_Name",
+        "VehicleTypeId",
+        "VehicleType",
+        "IsAppQuotation",
+    }
+    assert set(dumped.keys()) == expected_keys
+    assert len(dumped) == 5
+    assert dumped["Veh_Type_ID"] == 0
+    assert dumped["VehicleTypeId"] == 0
+    assert dumped["Veh_Type_Name"] == ""
+    assert dumped["VehicleType"] == ""
+
+
+def test_api_vehicle_make_schema_contract():
+    """Verify API_VehicleMakeResponse exact field names, casing, count, and defaults (GAP-P1-003)."""
+    schema = API_VehicleMakeResponse()
+    dumped = schema.model_dump()
+    expected_keys = {
+        "Make_ID",
+        "Make_Name",
+        "VehicleMakeId",
+        "CompanyName",
+        "R_Make_ID",
+        "GCV",
+        "Misc_D",
+        "PCV",
+        "PvtCar",
+        "Two_Wheeler",
+        "Bus",
+    }
+    assert set(dumped.keys()) == expected_keys
+    assert len(dumped) == 11
+    assert dumped["Make_ID"] == 0
+    assert dumped["VehicleMakeId"] == 0
+    assert dumped["Make_Name"] == ""
+    assert dumped["CompanyName"] == ""
+
+
+def test_api_vehicle_model_schema_contract():
+    """Verify API_VehicleModelResponse exact field names, casing, count, and defaults (GAP-P1-003)."""
+    schema = API_VehicleModelResponse()
+    dumped = schema.model_dump()
+    expected_keys = {
+        "Model_ID",
+        "Model_Name",
+        "Make_ID",
+        "ModelId",
+        "ModelName",
+        "MakeId",
+        "VehicleModelId",
+        "VehicleModelName",
+        "Type",
+        "SegmentId",
+    }
+    assert set(dumped.keys()) == expected_keys
+    assert len(dumped) == 10
+    assert dumped["Model_ID"] == 0
+    assert dumped["Make_ID"] == 0
+    assert dumped["Model_Name"] == ""
+
+
+def test_api_vehicle_variant_schema_contract():
+    """Verify API_VehicleVariantResponse exact field names, casing, count, and defaults (GAP-P1-003)."""
+    schema = API_VehicleVariantResponse()
+    dumped = schema.model_dump()
+    expected_keys = {
+        "Variant_ID",
+        "Variance",
+        "Model_ID",
+        "Veh_Type_ID",
+        "Veh_Sub_Type_ID",
+        "VariantId",
+        "VarianceName",
+        "CC",
+        "Seating_Capacity",
+        "Carrying_Capacity",
+        "Body_Type",
+        "FuelType",
+    }
+    assert set(dumped.keys()) == expected_keys
+    assert len(dumped) == 12
+    assert dumped["Variant_ID"] == 0
+    assert dumped["Variance"] == ""
+
+
+def test_api_rto_schema_contract():
+    """Verify API_RTOResponse exact field names, casing, count, and defaults (GAP-P1-003)."""
+    schema = API_RTOResponse()
+    dumped = schema.model_dump()
+    expected_keys = {
+        "RTOId",
+        "RTOLocation",
+        "REG_code",
+        "District",
+        "StateId",
+        "zone",
+        "ClusterId",
+        "RTOWithLocation",
+        "RTO_ID",
+        "RTO_Location",
+    }
+    assert set(dumped.keys()) == expected_keys
+    assert len(dumped) == 10
+    assert dumped["RTOId"] == 0
+    assert dumped["RTOLocation"] == ""
+    assert dumped["REG_code"] == ""
+
+
+def test_api_insurance_company_schema_contract():
+    """Verify API_InsuranceCompanyResponse exact field names, casing, count, and defaults (GAP-P1-003)."""
+    schema = API_InsuranceCompanyResponse()
+    dumped = schema.model_dump()
+    expected_keys = {
+        "InsuranceCompanyId",
+        "InsuranceCompany",
+        "BranchName",
+        "BranchCode",
+        "MailId",
+        "CompImgPath",
+        "ShortName",
+        "IsAppQuotation",
+    }
+    assert set(dumped.keys()) == expected_keys
+    assert len(dumped) == 8
+    assert dumped["InsuranceCompanyId"] == 0
+    assert dumped["InsuranceCompany"] == ""
+
 
 
 
@@ -1087,3 +1236,508 @@ async def test_select_ewallet_balance_invalid_bearer_token_rejected_401(
         json={"AgentId": agent1.AgentId},
     )
     assert resp.status_code == 401
+
+
+# ==============================================================================
+# 6. ASMX Vehicle & Entity Catalog Master Endpoints Tests (GAP-P1-003)
+# ==============================================================================
+
+@pytest.fixture
+async def asmx_catalog_fixtures(db_session: AsyncSession):
+    """
+    Catalog Master Fixture:
+    Sets up isolated VehicleType, VehicleMake (PvtCar & Two_Wheeler), VehicleModel,
+    VehicleVariant, RTOMaster, and InsuranceCompany for ASMX catalog tests.
+    """
+    vtype = VehicleType(
+        Veh_Type_Name="TEST_PVT_CAR_TYPE",
+        VehicleType="Four Wheeler",
+        IsAppQuotation=1,
+    )
+    db_session.add(vtype)
+
+    make_car = VehicleMake(
+        Make_Name="TEST_MARUTI",
+        PvtCar="1",
+        Two_Wheeler="0",
+        GCV="0",
+        PCV="0",
+        isdeleted=0,
+    )
+    make_bike = VehicleMake(
+        Make_Name="TEST_HONDA_BIKE",
+        PvtCar="0",
+        Two_Wheeler="1",
+        GCV="0",
+        PCV="0",
+        isdeleted=0,
+    )
+    db_session.add(make_car)
+    db_session.add(make_bike)
+    await db_session.commit()
+    await db_session.refresh(vtype)
+    await db_session.refresh(make_car)
+    await db_session.refresh(make_bike)
+
+    model1 = VehicleModel(
+        Make_ID=make_car.Make_ID,
+        Model_Name="TEST_SWIFT",
+        SegmentId=1,
+        isdeleted=0,
+    )
+    db_session.add(model1)
+    await db_session.commit()
+    await db_session.refresh(model1)
+
+    variant1 = VehicleVariant(
+        Model_ID=model1.Model_ID,
+        Veh_Type_ID=vtype.Veh_Type_ID,
+        Variance="TEST_SWIFT_VXI",
+        CC="1197",
+        Seating_Capacity="5",
+        Carrying_Capacity="0",
+        Body_Type="Hatchback",
+    )
+    db_session.add(variant1)
+
+    rto1 = RTOMaster(
+        RTOLocation="TEST_BANDRA_RTO",
+        District="MUMBAI",
+        REG_code="MH02_TEST",
+        StateId=14,
+        ClusterId=1,
+        zone="West",
+        RTOWithLocation="MH-02 (TEST BANDRA)",
+        isdeleted=0,
+    )
+    db_session.add(rto1)
+
+    insurer1 = InsuranceCompany(
+        InsuranceCompany="TEST_RELIANCE_GI",
+        BranchName="MUMBAI_MAIN",
+        BranchCode="BR001",
+        NCB="1",
+        Cluster="1",
+        ZeroDeep="1",
+        isdeleted="0",
+        IsAppQuotation="1",
+        MailId="test@reliance.com",
+        CompImgPath="/logos/reliance.png",
+        LedgerMId=700,
+        ShortName="TEST_REL",
+        PolicyNo="POL_TEST",
+        len=16,
+    )
+    db_session.add(insurer1)
+    await db_session.commit()
+    await db_session.refresh(variant1)
+    await db_session.refresh(rto1)
+    await db_session.refresh(insurer1)
+
+    yield {
+        "vtype": vtype,
+        "make_car": make_car,
+        "make_bike": make_bike,
+        "model1": model1,
+        "variant1": variant1,
+        "rto1": rto1,
+        "insurer1": insurer1,
+    }
+
+    # Teardown
+    await db_session.delete(variant1)
+    await db_session.delete(model1)
+    await db_session.delete(make_bike)
+    await db_session.delete(make_car)
+    await db_session.delete(vtype)
+    await db_session.delete(rto1)
+    await db_session.delete(insurer1)
+    await db_session.commit()
+
+
+@pytest.mark.asyncio
+async def test_select_vehicle_type_json_success(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify POST /Service.asmx/SelectVehicleType returns expected JSON array with 5 fields."""
+    vtype = asmx_catalog_fixtures["vtype"]
+    resp = await async_client.post("/Service.asmx/SelectVehicleType", json={})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, list)
+    matching = [x for x in data if x.get("Veh_Type_ID") == vtype.Veh_Type_ID]
+    assert len(matching) == 1
+    item = matching[0]
+    assert item["Veh_Type_ID"] == vtype.Veh_Type_ID
+    assert item["VehicleTypeId"] == vtype.Veh_Type_ID
+    assert item["Veh_Type_Name"] == "TEST_PVT_CAR_TYPE"
+    assert item["VehicleType"] == "Four Wheeler"
+    assert item["IsAppQuotation"] == 1
+
+
+@pytest.mark.asyncio
+async def test_select_vehicle_type_form_encoded_success(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify POST /Service.asmx/SelectVehicleType handles application/x-www-form-urlencoded."""
+    vtype = asmx_catalog_fixtures["vtype"]
+    resp = await async_client.post(
+        "/Service.asmx/SelectVehicleType",
+        data={"IsAppQuotation": "1"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert any(x.get("Veh_Type_ID") == vtype.Veh_Type_ID for x in data)
+
+
+@pytest.mark.asyncio
+async def test_select_vehicle_type_alias_route(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify alias route /Service.asmx/SelectVehicleTypeForQuaotation functions identically."""
+    vtype = asmx_catalog_fixtures["vtype"]
+    resp = await async_client.post(
+        "/Service.asmx/SelectVehicleTypeForQuaotation",
+        json={"IsAppQuotation": 1},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert any(x.get("Veh_Type_ID") == vtype.Veh_Type_ID for x in data)
+
+
+@pytest.mark.asyncio
+async def test_select_vehicle_make_json_success(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify POST /Service.asmx/SelectVehicleMake returns expected JSON array with 11 fields."""
+    make_car = asmx_catalog_fixtures["make_car"]
+    resp = await async_client.post("/Service.asmx/SelectVehicleMake", json={})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert isinstance(data, list)
+    matching = [x for x in data if x.get("Make_ID") == make_car.Make_ID]
+    assert len(matching) == 1
+    item = matching[0]
+    assert item["Make_ID"] == make_car.Make_ID
+    assert item["VehicleMakeId"] == make_car.Make_ID
+    assert item["Make_Name"] == "TEST_MARUTI"
+    assert item["CompanyName"] == "TEST_MARUTI"
+    assert item["PvtCar"] == "1"
+
+
+@pytest.mark.asyncio
+async def test_select_vehicle_make_category_filter(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify filtering by category (e.g. Two_Wheeler vs PvtCar) filters results correctly."""
+    make_car = asmx_catalog_fixtures["make_car"]
+    make_bike = asmx_catalog_fixtures["make_bike"]
+
+    # Filter for Two_Wheeler
+    resp_bike = await async_client.post(
+        "/Service.asmx/SelectVehicleMake",
+        json={"Category": "Two_Wheeler"},
+    )
+    assert resp_bike.status_code == 200
+    bike_data = resp_bike.json()
+    assert any(x["Make_ID"] == make_bike.Make_ID for x in bike_data)
+    assert not any(x["Make_ID"] == make_car.Make_ID for x in bike_data)
+
+    # Filter for PvtCar
+    resp_car = await async_client.post(
+        "/Service.asmx/SelectVehicleMake",
+        json={"Category": "PvtCar"},
+    )
+    assert resp_car.status_code == 200
+    car_data = resp_car.json()
+    assert any(x["Make_ID"] == make_car.Make_ID for x in car_data)
+    assert not any(x["Make_ID"] == make_bike.Make_ID for x in car_data)
+
+
+@pytest.mark.asyncio
+async def test_select_vehicle_make_conflicting_params(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify conflicting parameter values in payload fail gracefully to empty list."""
+    resp = await async_client.post(
+        "/Service.asmx/SelectVehicleMake",
+        json={"Category": "PvtCar", "category": "Two_Wheeler"},
+    )
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_select_vehicle_make_alias_routes(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify all alias routes for SelectVehicleMake work identically."""
+    make_car = asmx_catalog_fixtures["make_car"]
+    aliases = [
+        "/Service.asmx/selectVehicleMakeByType",
+        "/Service.asmx/selectVehicleMakeByTypeNew",
+        "/Service.asmx/SelectVehicleMakeForQuaotation",
+    ]
+    for url in aliases:
+        resp = await async_client.post(url, json={"Category": "PvtCar"})
+        assert resp.status_code == 200, f"Failed on alias {url}"
+        assert any(x["Make_ID"] == make_car.Make_ID for x in resp.json())
+
+
+@pytest.mark.asyncio
+async def test_select_vehicle_model_by_make_id(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify POST /Service.asmx/SelectVehicleModel by Make_ID returns models."""
+    make_car = asmx_catalog_fixtures["make_car"]
+    model1 = asmx_catalog_fixtures["model1"]
+
+    # Test with Make_ID
+    resp = await async_client.post(
+        "/Service.asmx/SelectVehicleModel",
+        json={"Make_ID": make_car.Make_ID},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    matching = [x for x in data if x.get("Model_ID") == model1.Model_ID]
+    assert len(matching) == 1
+    item = matching[0]
+    assert item["Model_ID"] == model1.Model_ID
+    assert item["ModelId"] == model1.Model_ID
+    assert item["Model_Name"] == "TEST_SWIFT"
+    assert item["ModelName"] == "TEST_SWIFT"
+    assert item["Make_ID"] == make_car.Make_ID
+
+    # Test with VehicleMakeId alias
+    resp_alias_key = await async_client.post(
+        "/Service.asmx/SelectVehicleModel",
+        json={"VehicleMakeId": make_car.Make_ID},
+    )
+    assert resp_alias_key.status_code == 200
+    assert any(x.get("Model_ID") == model1.Model_ID for x in resp_alias_key.json())
+
+
+@pytest.mark.asyncio
+async def test_select_vehicle_model_form_encoded(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify POST /Service.asmx/SelectVehicleModel via application/x-www-form-urlencoded."""
+    make_car = asmx_catalog_fixtures["make_car"]
+    model1 = asmx_catalog_fixtures["model1"]
+
+    resp = await async_client.post(
+        "/Service.asmx/SelectVehicleModel",
+        data={"Make_ID": str(make_car.Make_ID)},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert resp.status_code == 200
+    assert any(x.get("Model_ID") == model1.Model_ID for x in resp.json())
+
+
+@pytest.mark.asyncio
+async def test_select_vehicle_model_not_found_and_invalid(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify non-existent make ID, negative ID, and non-integer inputs return empty list []."""
+    for bad_input in [999999, -1, 0, "invalid_abc"]:
+        resp = await async_client.post(
+            "/Service.asmx/SelectVehicleModel",
+            json={"Make_ID": bad_input},
+        )
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_select_vehicle_model_alias_routes(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify alias routes for SelectVehicleModel work as expected."""
+    make_car = asmx_catalog_fixtures["make_car"]
+    model1 = asmx_catalog_fixtures["model1"]
+    aliases = [
+        "/Service.asmx/selectVehicleModel",
+        "/Service.asmx/AppVehicleModelNew",
+        "/Service.asmx/SelectVehicleModelForQuaotation",
+    ]
+    for url in aliases:
+        resp = await async_client.post(url, json={"Make_ID": make_car.Make_ID})
+        assert resp.status_code == 200, f"Failed on alias {url}"
+        assert any(x["Model_ID"] == model1.Model_ID for x in resp.json())
+
+
+@pytest.mark.asyncio
+async def test_select_vehicle_variance_by_model_id(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify POST /Service.asmx/SelectVehicleVariance by ModelId returns variants."""
+    model1 = asmx_catalog_fixtures["model1"]
+    variant1 = asmx_catalog_fixtures["variant1"]
+
+    # Test with ModelId
+    resp = await async_client.post(
+        "/Service.asmx/SelectVehicleVariance",
+        json={"ModelId": model1.Model_ID},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    matching = [x for x in data if x.get("Variant_ID") == variant1.Variant_ID]
+    assert len(matching) == 1
+    item = matching[0]
+    assert item["Variant_ID"] == variant1.Variant_ID
+    assert item["VariantId"] == variant1.Variant_ID
+    assert item["Variance"] == "TEST_SWIFT_VXI"
+    assert item["VarianceName"] == "TEST_SWIFT_VXI"
+    assert item["Model_ID"] == model1.Model_ID
+    assert item["CC"] == "1197"
+    assert item["Seating_Capacity"] == "5"
+
+    # Test with Model_ID alias key
+    resp2 = await async_client.post(
+        "/Service.asmx/SelectVehicleVariance",
+        json={"Model_ID": model1.Model_ID},
+    )
+    assert resp2.status_code == 200
+    assert any(x.get("Variant_ID") == variant1.Variant_ID for x in resp2.json())
+
+
+@pytest.mark.asyncio
+async def test_select_vehicle_variance_by_model_and_veh_type(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify POST /Service.asmx/SelectVehicleVariance filtering by ModelId and VehTypeId."""
+    model1 = asmx_catalog_fixtures["model1"]
+    vtype = asmx_catalog_fixtures["vtype"]
+    variant1 = asmx_catalog_fixtures["variant1"]
+
+    resp = await async_client.post(
+        "/Service.asmx/SelectVehicleVariance",
+        json={"ModelId": model1.Model_ID, "VehTypeId": vtype.Veh_Type_ID},
+    )
+    assert resp.status_code == 200
+    assert any(x.get("Variant_ID") == variant1.Variant_ID for x in resp.json())
+
+    # Mismatched veh_type_id returns empty list
+    resp_mismatch = await async_client.post(
+        "/Service.asmx/SelectVehicleVariance",
+        json={"ModelId": model1.Model_ID, "VehTypeId": 99999},
+    )
+    assert resp_mismatch.status_code == 200
+    assert resp_mismatch.json() == []
+
+
+@pytest.mark.asyncio
+async def test_select_vehicle_variance_alias_routes(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify alias routes for SelectVehicleVariance work identically."""
+    model1 = asmx_catalog_fixtures["model1"]
+    variant1 = asmx_catalog_fixtures["variant1"]
+    aliases = [
+        "/Service.asmx/selectVehicleVariantType",
+        "/Service.asmx/SelectVehicleVarianceForQuaotation",
+        "/Service.asmx/selectVehicleVariantSubType",
+    ]
+    for url in aliases:
+        resp = await async_client.post(url, json={"ModelId": model1.Model_ID})
+        assert resp.status_code == 200, f"Failed on alias {url}"
+        assert any(x["Variant_ID"] == variant1.Variant_ID for x in resp.json())
+
+
+@pytest.mark.asyncio
+async def test_select_rto_list_all_and_by_id(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify POST /Service.asmx/SelectRTO returns all RTOs and supports filtering by RTOId / StateId."""
+    rto1 = asmx_catalog_fixtures["rto1"]
+
+    # All RTOs
+    resp_all = await async_client.post("/Service.asmx/SelectRTO", json={})
+    assert resp_all.status_code == 200
+    assert any(x.get("RTOId") == rto1.RTOId for x in resp_all.json())
+
+    # By RTOId
+    resp_one = await async_client.post(
+        "/Service.asmx/SelectRTO",
+        json={"RTOId": rto1.RTOId},
+    )
+    assert resp_one.status_code == 200
+    data = resp_one.json()
+    assert len(data) == 1
+    assert data[0]["RTOId"] == rto1.RTOId
+    assert data[0]["RTO_ID"] == rto1.RTOId
+    assert data[0]["RTOLocation"] == "TEST_BANDRA_RTO"
+    assert data[0]["REG_code"] == "MH02_TEST"
+    assert data[0]["StateId"] == 14
+
+    # By StateId
+    resp_state = await async_client.post(
+        "/Service.asmx/SelectRTO",
+        json={"StateId": 14},
+    )
+    assert resp_state.status_code == 200
+    assert any(x.get("RTOId") == rto1.RTOId for x in resp_state.json())
+
+
+@pytest.mark.asyncio
+async def test_select_rto_alias_routes(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify alias routes /selectAppRto and /SelectRTOByID work as expected."""
+    rto1 = asmx_catalog_fixtures["rto1"]
+
+    resp1 = await async_client.post("/Service.asmx/selectAppRto", json={})
+    assert resp1.status_code == 200
+    assert any(x.get("RTOId") == rto1.RTOId for x in resp1.json())
+
+    resp2 = await async_client.post(
+        "/Service.asmx/SelectRTOByID",
+        json={"RTOId": rto1.RTOId},
+    )
+    assert resp2.status_code == 200
+    assert len(resp2.json()) == 1
+    assert resp2.json()[0]["RTOId"] == rto1.RTOId
+
+
+@pytest.mark.asyncio
+async def test_select_insurance_company_list_all_and_by_id(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify POST /Service.asmx/SelectInsuranceCompany returns insurance companies."""
+    insurer1 = asmx_catalog_fixtures["insurer1"]
+
+    # All insurers
+    resp_all = await async_client.post("/Service.asmx/SelectInsuranceCompany", json={})
+    assert resp_all.status_code == 200
+    matching = [x for x in resp_all.json() if x.get("InsuranceCompanyId") == insurer1.InsuranceCompanyId]
+    assert len(matching) == 1
+    item = matching[0]
+    assert item["InsuranceCompanyId"] == insurer1.InsuranceCompanyId
+    assert item["InsuranceCompany"] == "TEST_RELIANCE_GI"
+    assert item["BranchName"] == "MUMBAI_MAIN"
+    assert item["BranchCode"] == "BR001"
+    assert item["MailId"] == "test@reliance.com"
+    assert item["CompImgPath"] == "/logos/reliance.png"
+    assert item["ShortName"] == "TEST_REL"
+
+    # By ID
+    resp_one = await async_client.post(
+        "/Service.asmx/SelectInsuranceCompany",
+        json={"InsuranceCompanyId": insurer1.InsuranceCompanyId},
+    )
+    assert resp_one.status_code == 200
+    data = resp_one.json()
+    assert len(data) == 1
+    assert data[0]["InsuranceCompanyId"] == insurer1.InsuranceCompanyId
+
+
+@pytest.mark.asyncio
+async def test_select_insurance_company_alias_route(
+    async_client: AsyncClient, asmx_catalog_fixtures: dict
+):
+    """Verify alias route /Service.asmx/SelectInsuranceCompanyNew works identically."""
+    insurer1 = asmx_catalog_fixtures["insurer1"]
+    resp = await async_client.post("/Service.asmx/SelectInsuranceCompanyNew", json={})
+    assert resp.status_code == 200
+    assert any(x.get("InsuranceCompanyId") == insurer1.InsuranceCompanyId for x in resp.json())

@@ -32,11 +32,18 @@ from app.repositories.user import UserRepository
 from app.repositories.role import RoleRepository
 from app.repositories.payment_engine import PaymentEngineRepository
 from app.services.auth import AuthService
+from app.services.master_service import MasterService
 from app.schemas.asmx_compat import (
     API_AgentResponse,
     API_AgentNewResponse,
     API_CustomerAppResponse,
     API_EwalletBalanceResponse,
+    API_VehicleTypeResponse,
+    API_VehicleMakeResponse,
+    API_VehicleModelResponse,
+    API_VehicleVariantResponse,
+    API_RTOResponse,
+    API_InsuranceCompanyResponse,
 )
 
 logger = logging.getLogger("reliable.asmx_compat")
@@ -662,3 +669,502 @@ async def select_ewallet_balance_by_agent(
             AgentId=agent_id,
         )
     ]
+
+
+# ==============================================================================
+# 5. Vehicle Master Catalog Endpoints (GAP-P1-003)
+# ==============================================================================
+
+@router.post(
+    "/SelectVehicleType",
+    response_model=List[API_VehicleTypeResponse],
+    summary="Legacy Mobile SelectVehicleType Endpoint",
+    description="Returns list of vehicle category types matching legacy sp_AppVehicle_Type contract.",
+)
+@router.post(
+    "/SelectVehicleTypeForQuaotation",
+    response_model=List[API_VehicleTypeResponse],
+    include_in_schema=False,
+)
+async def select_vehicle_type(
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+) -> List[API_VehicleTypeResponse]:
+    """
+    Exact legacy ASMX SelectVehicleType handler.
+    Source: Service.asmx.cs L12221-L12249.
+    """
+    payload = await _parse_asmx_payload(request)
+    for_quotation_raw = _extract_param(
+        payload, ["for_quotation", "forquotation", "ForQuotation", "IsAppQuotation"]
+    )
+    for_quotation = (
+        str(for_quotation_raw).lower() in ("true", "1", "yes")
+        if for_quotation_raw
+        else False
+    )
+
+    service = MasterService(session)
+    types = await service.list_vehicle_types(for_quotation=for_quotation, limit=1000)
+
+    result = []
+    for t in types:
+        veh_type_name = t.Veh_Type_Name or t.VehicleType or ""
+        vehicle_type = t.VehicleType or t.Veh_Type_Name or ""
+        result.append(
+            API_VehicleTypeResponse(
+                Veh_Type_ID=t.Veh_Type_ID,
+                Veh_Type_Name=veh_type_name,
+                VehicleTypeId=t.Veh_Type_ID,
+                VehicleType=vehicle_type,
+                IsAppQuotation=t.IsAppQuotation,
+            )
+        )
+    return result
+
+
+@router.post(
+    "/SelectVehicleMake",
+    response_model=List[API_VehicleMakeResponse],
+    summary="Legacy Mobile SelectVehicleMake Endpoint",
+    description="Returns active vehicle makes matching legacy sp_AppVehicle_Make contract.",
+)
+@router.post(
+    "/selectVehicleMakeByType",
+    response_model=List[API_VehicleMakeResponse],
+    include_in_schema=False,
+)
+@router.post(
+    "/selectVehicleMakeByTypeNew",
+    response_model=List[API_VehicleMakeResponse],
+    include_in_schema=False,
+)
+@router.post(
+    "/SelectVehicleMakeForQuaotation",
+    response_model=List[API_VehicleMakeResponse],
+    include_in_schema=False,
+)
+async def select_vehicle_make(
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+) -> List[API_VehicleMakeResponse]:
+    """
+    Exact legacy ASMX SelectVehicleMake handler.
+    Source: Service.asmx.cs L12284 & L3325.
+    """
+    payload = await _parse_asmx_payload(request)
+    opr = _extract_param(
+        payload,
+        ["opr", "Opr", "OPR", "category", "Category", "vehicleType", "VehicleType"],
+    )
+    if opr == "__CONFLICT__":
+        return []
+
+    # Map legacy VehicleTypeId if provided (e.g. 1 -> Two_Wheeler, 2 -> PvtCar, 3 -> GCV, etc.)
+    veh_type_raw = _extract_param(
+        payload, ["VehicleTypeId", "vehicletypeid", "Veh_Type_ID", "veh_type_id"]
+    )
+    if not opr and veh_type_raw and veh_type_raw != "__CONFLICT__":
+        try:
+            v_id = int(veh_type_raw)
+            type_mapping = {
+                1: "Two_Wheeler",
+                2: "PvtCar",
+                3: "GCV",
+                4: "PCV",
+                5: "Misc_D",
+                6: "Bus",
+                7: "Three_Wheeler",
+            }
+            opr = type_mapping.get(v_id, opr)
+        except (ValueError, TypeError):
+            pass
+
+    search = _extract_param(payload, ["search", "Search", "prefix", "Prefix"])
+    if search == "__CONFLICT__":
+        return []
+
+    service = MasterService(session)
+    makes = await service.list_vehicle_makes(category=opr, search=search, limit=1000)
+
+    result = []
+    for m in makes:
+        result.append(
+            API_VehicleMakeResponse(
+                Make_ID=m.Make_ID,
+                Make_Name=m.Make_Name or "",
+                VehicleMakeId=m.Make_ID,
+                CompanyName=m.Make_Name or "",
+                R_Make_ID=m.R_Make_ID,
+                GCV=m.GCV,
+                Misc_D=m.Misc_D,
+                PCV=m.PCV,
+                PvtCar=m.PvtCar,
+                Two_Wheeler=m.Two_Wheeler,
+                Bus=m.Bus,
+            )
+        )
+    return result
+
+
+@router.post(
+    "/SelectVehicleModel",
+    response_model=List[API_VehicleModelResponse],
+    summary="Legacy Mobile SelectVehicleModel Endpoint",
+    description="Returns vehicle models matching legacy sp_AppVehicle_model contract.",
+)
+@router.post(
+    "/selectVehicleModel",
+    response_model=List[API_VehicleModelResponse],
+    include_in_schema=False,
+)
+@router.post(
+    "/AppVehicleModelNew",
+    response_model=List[API_VehicleModelResponse],
+    include_in_schema=False,
+)
+@router.post(
+    "/SelectVehicleModelForQuaotation",
+    response_model=List[API_VehicleModelResponse],
+    include_in_schema=False,
+)
+async def select_vehicle_model(
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+) -> List[API_VehicleModelResponse]:
+    """
+    Exact legacy ASMX SelectVehicleModel handler.
+    Source: Service.asmx.cs L3208 & L3408.
+    """
+    payload = await _parse_asmx_payload(request)
+    make_id_raw = _extract_param(
+        payload,
+        ["VehicleMakeId", "vehiclemakeid", "Make_ID", "make_id", "MakeId", "makeid"],
+    )
+    if make_id_raw == "__CONFLICT__":
+        return []
+
+    make_id: Optional[int] = None
+    if make_id_raw:
+        try:
+            make_id = int(make_id_raw)
+            if make_id <= 0:
+                return []
+        except (ValueError, TypeError):
+            return []
+
+    search = _extract_param(payload, ["search", "Search", "prefix", "Prefix"])
+    if search == "__CONFLICT__":
+        return []
+
+    service = MasterService(session)
+    models = await service.list_vehicle_models(make_id=make_id, search=search, limit=1000)
+
+    result = []
+    for mdl in models:
+        result.append(
+            API_VehicleModelResponse(
+                Model_ID=mdl.Model_ID,
+                Model_Name=mdl.Model_Name or "",
+                Make_ID=mdl.Make_ID or 0,
+                ModelId=mdl.Model_ID,
+                ModelName=mdl.Model_Name or "",
+                MakeId=mdl.Make_ID or 0,
+                VehicleModelId=mdl.Model_ID,
+                VehicleModelName=mdl.Model_Name or "",
+                Type=mdl.Type,
+                SegmentId=mdl.SegmentId,
+            )
+        )
+    return result
+
+
+@router.post(
+    "/SelectVehicleVariance",
+    response_model=List[API_VehicleVariantResponse],
+    summary="Legacy Mobile SelectVehicleVariance Endpoint",
+    description="Returns vehicle variants matching legacy sp_AppVehicleVaraintswithtype contract.",
+)
+@router.post(
+    "/selectVehicleVariantType",
+    response_model=List[API_VehicleVariantResponse],
+    include_in_schema=False,
+)
+@router.post(
+    "/SelectVehicleVarianceForQuaotation",
+    response_model=List[API_VehicleVariantResponse],
+    include_in_schema=False,
+)
+@router.post(
+    "/selectVehicleVariantSubType",
+    response_model=List[API_VehicleVariantResponse],
+    include_in_schema=False,
+)
+async def select_vehicle_variance(
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+) -> List[API_VehicleVariantResponse]:
+    """
+    Exact legacy ASMX SelectVehicleVariance handler.
+    Source: Service.asmx.cs L3442 & L3381.
+    """
+    payload = await _parse_asmx_payload(request)
+    model_id_raw = _extract_param(
+        payload, ["ModelId", "modelid", "Model_ID", "model_id", "ModelID"]
+    )
+    veh_type_raw = _extract_param(
+        payload,
+        ["VehTypeId", "vehtypeid", "Veh_Type_ID", "veh_type_id", "VehicleTypeId", "vehicletypeid"],
+    )
+    veh_sub_type_raw = _extract_param(
+        payload, ["VehSubTypeId", "vehsubtypeid", "Veh_Sub_Type_ID", "veh_sub_type_id"]
+    )
+
+    if (
+        model_id_raw == "__CONFLICT__"
+        or veh_type_raw == "__CONFLICT__"
+        or veh_sub_type_raw == "__CONFLICT__"
+    ):
+        return []
+
+    model_id: Optional[int] = None
+    if model_id_raw:
+        try:
+            model_id = int(model_id_raw)
+            if model_id <= 0:
+                return []
+        except (ValueError, TypeError):
+            return []
+
+    veh_type_id: Optional[int] = None
+    if veh_type_raw:
+        try:
+            veh_type_id = int(veh_type_raw)
+        except (ValueError, TypeError):
+            pass
+
+    veh_sub_type_id: Optional[int] = None
+    if veh_sub_type_raw:
+        try:
+            veh_sub_type_id = int(veh_sub_type_raw)
+        except (ValueError, TypeError):
+            pass
+
+    search = _extract_param(payload, ["search", "Search", "prefix", "Prefix"])
+    if search == "__CONFLICT__":
+        return []
+
+    service = MasterService(session)
+    variants = await service.list_vehicle_variants(
+        model_id=model_id,
+        veh_type_id=veh_type_id,
+        veh_sub_type_id=veh_sub_type_id,
+        search=search,
+        limit=1000,
+    )
+
+    result = []
+    for v in variants:
+        result.append(
+            API_VehicleVariantResponse(
+                Variant_ID=v.Variant_ID,
+                Variance=v.Variance or "",
+                Model_ID=v.Model_ID or 0,
+                Veh_Type_ID=v.Veh_Type_ID or 0,
+                Veh_Sub_Type_ID=v.Veh_Sub_Type_ID,
+                VariantId=v.Variant_ID,
+                VarianceName=v.Variance or "",
+                CC=v.CC or "",
+                Seating_Capacity=v.Seating_Capacity or "",
+                Carrying_Capacity=v.Carrying_Capacity or "",
+                Body_Type=v.Body_Type or "",
+                FuelType=v.COM_Segment or "",
+            )
+        )
+    return result
+
+
+@router.post(
+    "/SelectRTO",
+    response_model=List[API_RTOResponse],
+    summary="Legacy Mobile SelectRTO Endpoint",
+    description="Returns RTO location master data matching legacy sp_selectAppRto and sp_SelectRTOByID contracts.",
+)
+@router.post(
+    "/selectAppRto",
+    response_model=List[API_RTOResponse],
+    include_in_schema=False,
+)
+@router.post(
+    "/SelectRTOByID",
+    response_model=List[API_RTOResponse],
+    include_in_schema=False,
+)
+async def select_rto(
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+) -> List[API_RTOResponse]:
+    """
+    Exact legacy ASMX SelectRTO handler.
+    Source: Service.asmx.cs L13057 & L13087.
+    """
+    payload = await _parse_asmx_payload(request)
+    rto_id_raw = _extract_param(payload, ["RTOId", "rtoid", "RTO_ID", "rto_id", "P_RTOId"])
+    if rto_id_raw == "__CONFLICT__":
+        return []
+
+    service = MasterService(session)
+    if rto_id_raw:
+        try:
+            rto_id = int(rto_id_raw)
+            if rto_id > 0:
+                rto = await service.get_rto(rto_id)
+                if not rto:
+                    return []
+                return [
+                    API_RTOResponse(
+                        RTOId=rto.RTOId,
+                        RTOLocation=rto.RTOLocation or "",
+                        REG_code=rto.REG_code or "",
+                        District=rto.District or "",
+                        StateId=rto.StateId,
+                        zone=rto.zone or "",
+                        ClusterId=rto.ClusterId,
+                        RTOWithLocation=rto.RTOWithLocation or f"{rto.REG_code} - {rto.RTOLocation}",
+                        RTO_ID=rto.RTOId,
+                        RTO_Location=rto.RTOLocation or "",
+                    )
+                ]
+            else:
+                return []
+        except (ValueError, TypeError):
+            return []
+
+    state_id_raw = _extract_param(payload, ["StateId", "stateid", "State_ID_FK", "state_id"])
+    state_id: Optional[int] = None
+    if state_id_raw and state_id_raw != "__CONFLICT__":
+        try:
+            state_id = int(state_id_raw)
+        except (ValueError, TypeError):
+            pass
+
+    search = _extract_param(payload, ["search", "Search", "SearchText", "prefix", "Prefix"])
+    if search == "__CONFLICT__":
+        return []
+
+    rtos = await service.list_rtos(search=search, state_id=state_id, limit=5000)
+    result = []
+    for r in rtos:
+        result.append(
+            API_RTOResponse(
+                RTOId=r.RTOId,
+                RTOLocation=r.RTOLocation or "",
+                REG_code=r.REG_code or "",
+                District=r.District or "",
+                StateId=r.StateId,
+                zone=r.zone or "",
+                ClusterId=r.ClusterId,
+                RTOWithLocation=r.RTOWithLocation or f"{r.REG_code} - {r.RTOLocation}",
+                RTO_ID=r.RTOId,
+                RTO_Location=r.RTOLocation or "",
+            )
+        )
+    return result
+
+
+@router.post(
+    "/SelectInsuranceCompany",
+    response_model=List[API_InsuranceCompanyResponse],
+    summary="Legacy Mobile SelectInsuranceCompany Endpoint",
+    description="Returns active insurance company list matching legacy sp_APPInsuranceCompany contract.",
+)
+@router.post(
+    "/SelectInsuranceCompanyNew",
+    response_model=List[API_InsuranceCompanyResponse],
+    include_in_schema=False,
+)
+async def select_insurance_company(
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+) -> List[API_InsuranceCompanyResponse]:
+    """
+    Exact legacy ASMX SelectInsuranceCompany handler.
+    Source: Service.asmx.cs L124 & L149.
+    """
+    payload = await _parse_asmx_payload(request)
+    company_id_raw = _extract_param(
+        payload, ["InsuranceCompanyId", "insurancecompanyid", "CompanyId", "company_id"]
+    )
+    if company_id_raw == "__CONFLICT__":
+        return []
+
+    service = MasterService(session)
+    if company_id_raw:
+        try:
+            c_id = int(company_id_raw)
+            if c_id > 0:
+                comp = await service.get_insurance_company(c_id)
+                if not comp:
+                    return []
+                return [
+                    API_InsuranceCompanyResponse(
+                        InsuranceCompanyId=comp.InsuranceCompanyId,
+                        InsuranceCompany=comp.InsuranceCompany or "",
+                        BranchName=comp.BranchName or "",
+                        BranchCode=comp.BranchCode or "",
+                        MailId=comp.MailId or "",
+                        CompImgPath=comp.CompImgPath or "",
+                        ShortName=comp.ShortName or "",
+                    )
+                ]
+            else:
+                return []
+        except (ValueError, TypeError):
+            return []
+
+    is_app_raw = _extract_param(
+        payload, ["is_app_quotation_only", "IsAppQuotation", "isappquotation"]
+    )
+    is_app_only = (
+        str(is_app_raw).lower() in ("true", "1", "yes")
+        if is_app_raw
+        else False
+    )
+
+    veh_type_raw = _extract_param(
+        payload, ["veh_type_id", "Veh_Type_ID", "VehicleTypeId", "vehicletypeid"]
+    )
+    veh_type_id: Optional[int] = None
+    if veh_type_raw and veh_type_raw != "__CONFLICT__":
+        try:
+            veh_type_id = int(veh_type_raw)
+        except (ValueError, TypeError):
+            pass
+
+    search = _extract_param(payload, ["search", "Search", "prefix", "Prefix"])
+    if search == "__CONFLICT__":
+        return []
+
+    service = MasterService(session)
+    companies = await service.list_insurance_companies(
+        search=search,
+        is_app_quotation_only=is_app_only,
+        veh_type_id=veh_type_id,
+        limit=1000,
+    )
+
+    result = []
+    for c in companies:
+        result.append(
+            API_InsuranceCompanyResponse(
+                InsuranceCompanyId=c.InsuranceCompanyId,
+                InsuranceCompany=c.InsuranceCompany or "",
+                BranchName=c.BranchName or "",
+                BranchCode=c.BranchCode or "",
+                MailId=c.MailId or "",
+                CompImgPath=c.CompImgPath or "",
+                ShortName=c.ShortName or "",
+                IsAppQuotation=c.IsAppQuotation,
+            )
+        )
+    return result
