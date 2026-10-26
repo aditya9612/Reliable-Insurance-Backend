@@ -79,6 +79,10 @@ def create_application() -> FastAPI:
     # 5. API V1 Routes
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
+    # 6. Legacy ASMX Mobile Compatibility Routes (GAP-P1-001)
+    from app.api.v1.endpoints.asmx_compat import router as asmx_compat_router
+    app.include_router(asmx_compat_router, prefix="/Service.asmx", tags=["legacy-asmx-compat"])
+
     @app.get("/", tags=["Root"])
     async def root():
         return {
